@@ -198,7 +198,8 @@ class LlamaCockpitApp(App):
     }
 
     #confirm_dialog {
-        width: 80;
+        width: 90%;
+        max-width: 100;
         height: auto;
         border: solid #d32f2f;
         background: #1e1e1e;
@@ -206,8 +207,9 @@ class LlamaCockpitApp(App):
     }
     
     #select_dialog {
-        width: 80;
-        height: auto;
+        width: 90%;
+        max-width: 100;
+        height: 80%;
         border: solid #d32f2f;
         background: #1e1e1e;
         padding: 1 2;
@@ -218,6 +220,7 @@ class LlamaCockpitApp(App):
         text-style: bold;
         color: #e57373;
         margin-bottom: 1;
+        width: 100%;
     }
 
     #confirm_buttons, #select_buttons {
