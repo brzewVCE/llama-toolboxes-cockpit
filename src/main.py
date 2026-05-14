@@ -524,17 +524,20 @@ class LlamaCockpitApp(App):
     def _handle_delete(self):
         tbs = self.get_selected_toolboxes()
         tbs = [tb for tb in tbs if tb["status"] != "Not Installed"]
-        if tbs:
-            names = ", ".join([tb['name'] for tb in tbs])
-            self._pending_delete_tbs = tbs
-            self.app.push_screen(
-                ConfirmModal(f"Are you sure you want to delete: {names}?"),
-                self._on_delete_confirmed
-            )
+        if not tbs:
+            self.notify("No installed toolboxes selected.", severity="warning")
+            return
+        names = ", ".join([tb['name'] for tb in tbs])
+        self._pending_delete_tbs = tbs
+        self.app.push_screen(
+            ConfirmModal(f"Are you sure you want to delete: {names}?"),
+            self._on_delete_confirmed
+        )
 
     def _handle_create_update(self):
         tbs = self.get_selected_toolboxes()
         if not tbs:
+            self.notify("No toolboxes selected.", severity="warning")
             return
         to_create, to_update, already_updated = [], [], []
 
@@ -582,10 +585,15 @@ class LlamaCockpitApp(App):
 
     def _handle_enter_toolbox(self):
         tb = self.get_selected_toolbox()
-        if tb and tb["status"] != "Not Installed":
-            cmd = get_os_toolbox_cmd()
-            with self.suspend():
-                os.system(f"{cmd} enter {tb['name']}")
+        if not tb:
+            self.notify("Select exactly one toolbox to enter.", severity="warning")
+            return
+        if tb["status"] == "Not Installed":
+            self.notify("Cannot enter a toolbox that is not installed.", severity="warning")
+            return
+        cmd = get_os_toolbox_cmd()
+        with self.suspend():
+            os.system(f"{cmd} enter {tb['name']}")
 
     # ── Server Handler ────────────────────────────────────────────
 
