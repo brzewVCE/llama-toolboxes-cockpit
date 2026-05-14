@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "llama-cockpit"
 version = "0.1.0"
-description = "A TUI for managing AMD Strix Halo Llama.cpp toolboxes and models."
+description = "A TUI for managing Llama.cpp toolbox containers and models across AMD GPU platforms."
 authors = [{name = "kyuz0"}]
 readme = "README.md"
 requires-python = ">=3.10"
