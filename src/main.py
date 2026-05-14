@@ -341,8 +341,7 @@ class LlamaCockpitApp(App):
                     self.selected_toolboxes.add(name)
                     event.control.update_cell_at((event.cursor_row, 0), "\\[x]")
                 
-                btn_enter = self.query_one("#btn_enter", Button)
-                btn_enter.disabled = len(self.selected_toolboxes) != 1
+
             except Exception:
                 pass
 
@@ -439,8 +438,7 @@ class LlamaCockpitApp(App):
                         first = False
                     else:
                         dt.add_class("inactive-table")
-            btn_enter = self.query_one("#btn_enter", Button)
-            btn_enter.disabled = len(getattr(self, 'selected_toolboxes', set())) != 1
+
             self._mounting_tables = False
             
         self.call_next(finish_mounting)
@@ -635,8 +633,7 @@ class LlamaCockpitApp(App):
                 self.selected_toolboxes.add(name)
                 dt.update_cell_at((i, 0), "\\[x]")
 
-        btn_enter = self.query_one("#btn_enter", Button)
-        btn_enter.disabled = len(self.selected_toolboxes) != 1
+
 
     # ── Model Manager Handlers ────────────────────────────────────
 
