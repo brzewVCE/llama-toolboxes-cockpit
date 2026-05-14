@@ -119,6 +119,10 @@ class LlamaCockpitApp(App):
         max-height: 3;
         margin-top: 1;
     }
+
+    .options-row Checkbox {
+        margin-right: 4;
+    }
     
     #banner {
         text-align: center;
