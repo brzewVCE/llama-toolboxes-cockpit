@@ -177,6 +177,10 @@ class LlamaCockpitApp(App):
         margin-bottom: 1;
     }
     
+    #toolbox_container Vertical {
+        height: auto;
+    }
+    
     #local_model_list {
         border: solid #d32f2f;
         height: 1fr;
