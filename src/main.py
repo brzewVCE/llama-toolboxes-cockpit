@@ -333,6 +333,7 @@ class LlamaCockpitApp(App):
                         Button("Scan Local", id="btn_scan_models"),
                         id="btn_row"
                     ),
+                    Label("Local GGUF Models", classes="inline-label"),
                     DataTable(id="local_model_list", cursor_type="row"),
                 )
         yield Footer()
@@ -505,7 +506,7 @@ class LlamaCockpitApp(App):
         self.current_models = models
         dt = self.query_one("#local_model_list", DataTable)
         dt.clear(columns=True)
-        dt.add_columns("Local GGUF Models")
+        dt.add_columns("Filename")
         
         sel_model = self.query_one("#sel_model", Select)
         model_opts = []
