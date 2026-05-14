@@ -79,6 +79,7 @@ class LlamaCockpitApp(App):
 
     .inline-row {
         height: auto;
+        max-height: 5;
         margin-top: 1;
     }
 
@@ -94,6 +95,8 @@ class LlamaCockpitApp(App):
 
     .inline-row SearchableSelect {
         width: 1fr;
+        height: auto;
+        max-height: 3;
     }
 
     .inline-row Input {
@@ -102,16 +105,20 @@ class LlamaCockpitApp(App):
 
     .short-field {
         width: 1fr;
+        height: auto;
+        max-height: 3;
         margin-right: 2;
     }
 
     .short-field .inline-label {
         width: auto;
         min-width: 8;
+        height: 1;
     }
 
     .options-row {
         height: auto;
+        max-height: 3;
         margin-top: 1;
     }
     
