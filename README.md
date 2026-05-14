@@ -3,7 +3,7 @@
 A modern Terminal User Interface (TUI) for managing Llama.cpp toolbox containers and GGUF models across multiple AMD GPU platforms.
 
 <!-- TODO: Replace with actual recording -->
-![Llama Cockpit Demo](docs/demo.gif)
+![Llama Cockpit Demo](demo.gif)
 
 ## Supported Platforms
 
