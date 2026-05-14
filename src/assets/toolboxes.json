@@ -72,6 +72,29 @@
                 "--group-add", "sudo",
                 "--security-opt", "seccomp=unconfined"
               ]
+            },
+            {
+              "name": "llama-rocm-7.2.3-mtp",
+              "tag": "rocm-7.2.3-mtp",
+              "description": "ROCm 7.2.3 with Multi-Token Prediction (Experimental)",
+              "engine_args": [
+                "--device", "/dev/dri",
+                "--device", "/dev/kfd",
+                "--group-add", "video",
+                "--group-add", "render",
+                "--group-add", "sudo",
+                "--security-opt", "seccomp=unconfined"
+              ]
+            },
+            {
+              "name": "llama-vulkan-radv-mtp",
+              "tag": "vulkan-radv-mtp",
+              "description": "Mesa RADV Vulkan with Multi-Token Prediction (Experimental)",
+              "engine_args": [
+                "--device", "/dev/dri",
+                "--group-add", "video",
+                "--security-opt", "seccomp=unconfined"
+              ]
             }
           ]
         }

@@ -12,6 +12,10 @@
     "repo": "unsloth/Qwen3.6-27B-GGUF"
   },
   {
+    "name": "Qwen 3.6 27B MTP",
+    "repo": "unsloth/Qwen3.6-27B-MTP-GGUF"
+  },
+  {
     "name": "Qwen 3 Coder 30B A3B Instruct",
     "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF"
   },
