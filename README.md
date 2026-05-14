@@ -1,4 +1,4 @@
-# Llama Cockpit
+# Llama Toolboxes Cockpit
 
 A modern Terminal User Interface (TUI) for managing Llama.cpp toolbox containers and GGUF models across multiple AMD GPU platforms.
 
