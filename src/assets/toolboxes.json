@@ -58,7 +58,7 @@
           ]
         },
         {
-          "name": "Experimental Toolboxes",
+          "name": "Dev/Experimental Toolboxes",
           "toolboxes": [
             {
               "name": "llama-rocm-7.2.2-pr21344",
@@ -93,6 +93,19 @@
               "engine_args": [
                 "--device", "/dev/dri",
                 "--group-add", "video",
+                "--security-opt", "seccomp=unconfined"
+              ]
+            },
+            {
+              "name": "llama-rocm7-nightlies",
+              "tag": "rocm7-nightlies",
+              "description": "TheROCk nightly builds — bleeding edge, may contain bugs",
+              "engine_args": [
+                "--device", "/dev/dri",
+                "--device", "/dev/kfd",
+                "--group-add", "video",
+                "--group-add", "render",
+                "--group-add", "sudo",
                 "--security-opt", "seccomp=unconfined"
               ]
             }
@@ -154,11 +167,16 @@
                 "--group-add", "video",
                 "--security-opt", "seccomp=unconfined"
               ]
-            },
+            }
+          ]
+        },
+        {
+          "name": "Dev/Experimental Toolboxes",
+          "toolboxes": [
             {
               "name": "r9700-llama-rocm7-nightlies",
               "tag": "rocm7-nightlies",
-              "description": "ROCm 7 nightly builds",
+              "description": "TheROCk nightly builds — bleeding edge, may contain bugs",
               "engine_args": [
                 "--device", "/dev/dri",
                 "--device", "/dev/kfd",
