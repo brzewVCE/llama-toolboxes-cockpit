@@ -8,25 +8,65 @@
           "name": "llama-rocm-7.2.3",
           "tag": "rocm-7.2.3",
           "description": "Stable ROCm 7.2.3 backend (recommended)",
-          "engine_args": ["--device", "/dev/dri", "--device", "/dev/kfd", "--group-add", "video", "--group-add", "render", "--group-add", "sudo", "--security-opt", "seccomp=unconfined"]
+          "engine_args": [
+            "--device",
+            "/dev/dri",
+            "--device",
+            "/dev/kfd",
+            "--group-add",
+            "video",
+            "--group-add",
+            "render",
+            "--group-add",
+            "sudo",
+            "--security-opt",
+            "seccomp=unconfined"
+          ]
         },
         {
           "name": "llama-rocm-6.4.4",
           "tag": "rocm-6.4.4",
           "description": "Stable ROCm 6.4.4 backend",
-          "engine_args": ["--device", "/dev/dri", "--device", "/dev/kfd", "--group-add", "video", "--group-add", "render", "--group-add", "sudo", "--security-opt", "seccomp=unconfined"]
+          "engine_args": [
+            "--device",
+            "/dev/dri",
+            "--device",
+            "/dev/kfd",
+            "--group-add",
+            "video",
+            "--group-add",
+            "render",
+            "--group-add",
+            "sudo",
+            "--security-opt",
+            "seccomp=unconfined"
+          ]
         },
         {
           "name": "llama-vulkan-radv",
           "tag": "vulkan-radv",
           "description": "Mesa RADV Vulkan backend",
-          "engine_args": ["--device", "/dev/dri", "--group-add", "video", "--security-opt", "seccomp=unconfined"]
+          "engine_args": [
+            "--device",
+            "/dev/dri",
+            "--group-add",
+            "video",
+            "--security-opt",
+            "seccomp=unconfined"
+          ]
         },
         {
           "name": "llama-vulkan-amdvlk",
           "tag": "vulkan-amdvlk",
           "description": "AMDVLK Vulkan backend",
-          "engine_args": ["--device", "/dev/dri", "--group-add", "video", "--security-opt", "seccomp=unconfined"]
+          "engine_args": [
+            "--device",
+            "/dev/dri",
+            "--group-add",
+            "video",
+            "--security-opt",
+            "seccomp=unconfined"
+          ]
         }
       ]
     },
@@ -34,10 +74,23 @@
       "name": "Experimental Toolboxes",
       "toolboxes": [
         {
-          "name": "llama-rocm7-nightlies",
-          "tag": "rocm7-nightlies",
-          "description": "Nightly ROCm 7 builds (Unstable)",
-          "engine_args": ["--device", "/dev/dri", "--device", "/dev/kfd", "--group-add", "video", "--group-add", "render", "--group-add", "sudo", "--security-opt", "seccomp=unconfined"]
+          "name": "llama-rocm-7.2.2-pr21344",
+          "tag": "rocm-7.2.2-pr21344",
+          "description": "ROCm PR 21344 builds (Experimental)",
+          "engine_args": [
+            "--device",
+            "/dev/dri",
+            "--device",
+            "/dev/kfd",
+            "--group-add",
+            "video",
+            "--group-add",
+            "render",
+            "--group-add",
+            "sudo",
+            "--security-opt",
+            "seccomp=unconfined"
+          ]
         }
       ]
     }
