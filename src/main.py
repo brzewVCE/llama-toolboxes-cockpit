@@ -76,6 +76,44 @@ class LlamaCockpitApp(App):
         text-style: bold;
         color: #e57373;
     }
+
+    .inline-row {
+        height: auto;
+        margin-top: 1;
+    }
+
+    .inline-row .inline-label {
+        width: auto;
+        min-width: 12;
+        text-style: bold;
+        color: #e57373;
+        padding-right: 1;
+        height: 1;
+        content-align: left middle;
+    }
+
+    .inline-row SearchableSelect {
+        width: 1fr;
+    }
+
+    .inline-row Input {
+        width: 1fr;
+    }
+
+    .short-field {
+        width: 1fr;
+        margin-right: 2;
+    }
+
+    .short-field .inline-label {
+        width: auto;
+        min-width: 8;
+    }
+
+    .options-row {
+        height: auto;
+        margin-top: 1;
+    }
     
     #banner {
         text-align: center;
@@ -256,24 +294,37 @@ class LlamaCockpitApp(App):
             with TabPane("Server Mode", id="tab-server"):
                 yield VerticalScroll(
                     Static("Launch a Llama.cpp inference server directly without entering an interactive environment.", classes="box"),
-                    Label("Container Engine", classes="field-label"),
-                    SearchableSelect(prompt="Select Container Engine", id="sel_engine"),
-                    Label("Toolbox Image", classes="field-label"),
-                    SearchableSelect(prompt="Select Toolbox Image", id="sel_image"),
-                    Label("Local Model", classes="field-label"),
-                    SearchableSelect(prompt="Select Local Model", id="sel_model"),
-                    Label("Context Size", classes="field-label"),
-                    Input(placeholder="Context Size (e.g. 12288)", id="inp_ctx", value="12288"),
                     Horizontal(
-                        Vertical(Label("Host", classes="field-label"), Input(placeholder="Host (e.g. localhost)", id="inp_host", value="localhost")),
-                        Vertical(Label("Port", classes="field-label"), Input(placeholder="Port (e.g. 8080)", id="inp_port", value="8080")),
-                        id="host_port_row"
+                        Label("Engine", classes="inline-label"),
+                        SearchableSelect(prompt="Select Container Engine", id="sel_engine"),
+                        classes="inline-row"
                     ),
-                    Label("Options", classes="field-label"),
-                    Checkbox("Enable Flash Attention (-fa 1)", id="chk_fa", value=True),
-                    Checkbox("Disable Memory Mapping (--no-mmap)", id="chk_no_mmap", value=True),
-                    Label("Additional Parameters", classes="field-label"),
-                    Input(placeholder="Additional Parameters (e.g. --batch-size 512)", id="inp_custom_args", value="--jinja"),
+                    Horizontal(
+                        Label("Image", classes="inline-label"),
+                        SearchableSelect(prompt="Select Toolbox Image", id="sel_image"),
+                        classes="inline-row"
+                    ),
+                    Horizontal(
+                        Label("Model", classes="inline-label"),
+                        SearchableSelect(prompt="Select Local Model", id="sel_model"),
+                        classes="inline-row"
+                    ),
+                    Horizontal(
+                        Horizontal(Label("Context", classes="inline-label"), Input(placeholder="12288", id="inp_ctx", value="12288"), classes="short-field"),
+                        Horizontal(Label("Host", classes="inline-label"), Input(placeholder="localhost", id="inp_host", value="localhost"), classes="short-field"),
+                        Horizontal(Label("Port", classes="inline-label"), Input(placeholder="8080", id="inp_port", value="8080"), classes="short-field"),
+                        classes="inline-row"
+                    ),
+                    Horizontal(
+                        Checkbox("Flash Attention (-fa 1)", id="chk_fa", value=True),
+                        Checkbox("No Memory Mapping (--no-mmap)", id="chk_no_mmap", value=True),
+                        classes="options-row"
+                    ),
+                    Horizontal(
+                        Label("Extra Args", classes="inline-label"),
+                        Input(placeholder="e.g. --batch-size 512", id="inp_custom_args", value="--jinja"),
+                        classes="inline-row"
+                    ),
                     Horizontal(
                         Button("Start Server", id="btn_start_server", variant="primary"),
                         id="btn_row"
