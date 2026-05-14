@@ -4,8 +4,39 @@ import glob
 from huggingface_hub import HfApi
 from pathlib import Path
 
+CONFIG_FILE = Path(os.path.expanduser("~/.llama-cockpit.conf"))
+
 def get_models_dir() -> Path:
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                conf = json.load(f)
+                if "models_dir" in conf:
+                    return Path(os.path.expanduser(conf["models_dir"]))
+        except Exception:
+            pass
     return Path(os.path.expanduser("~/models"))
+
+def save_models_dir(path_str: str) -> bool:
+    conf = {}
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                conf = json.load(f)
+        except Exception:
+            pass
+    
+    conf["models_dir"] = path_str
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(conf, f, indent=4)
+        
+        new_dir = Path(os.path.expanduser(path_str))
+        new_dir.mkdir(parents=True, exist_ok=True)
+        return True
+    except Exception as e:
+        print(f"Error saving config: {e}")
+        return False
 
 def scan_local_models() -> list[dict]:
     models_dir = get_models_dir()

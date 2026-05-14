@@ -7,7 +7,7 @@ import os
 import subprocess
 
 from src.toolbox_manager import get_all_toolboxes, get_installed_toolboxes, detect_engines, get_os_toolbox_cmd, get_remote_image_date, create_toolbox, delete_toolbox
-from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd
+from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir
 from src.server_runner import build_server_cmd
 from src.config import load_models, get_official_registry, load_toolboxes
 from src.widgets import SearchableSelect
@@ -138,6 +138,26 @@ class LlamaCockpitApp(App):
         height: auto;
     }
     
+    #models_dir_row {
+        height: auto;
+        align: left middle;
+        margin-bottom: 1;
+    }
+    #models_dir_row > Input {
+        width: 1fr;
+    }
+    
+    .btn-toggle-all {
+        height: auto;
+        min-width: 10;
+        margin: 1 0;
+        border: none;
+        background: #333333;
+    }
+    .btn-toggle-all:hover {
+        background: #d32f2f;
+    }
+    
     #host_port_row Vertical {
         width: 1fr;
         height: auto;
@@ -212,7 +232,12 @@ class LlamaCockpitApp(App):
                 )
             with TabPane("Model Manager", id="tab-models"):
                 yield Vertical(
-                    Static("Download and manage GGUF models for inference.", classes="box"),
+                    Static("Download and manage GGUF models for inference.\\nModels will be downloaded to and scanned from the directory configured below.", classes="box"),
+                    Horizontal(
+                        Input(placeholder="~/models", id="inp_models_dir", value=str(get_models_dir())),
+                        Button("Save Path", id="btn_save_models_path"),
+                        id="models_dir_row"
+                    ),
                     DataTable(id="local_model_list", cursor_type="row"),
                     Horizontal(
                         SearchableSelect(prompt="Download Curated Model", id="sel_download_model"),
@@ -262,10 +287,10 @@ class LlamaCockpitApp(App):
                 name = event.control.get_cell_at((event.cursor_row, 1))
                 if name in self.selected_toolboxes:
                     self.selected_toolboxes.remove(name)
-                    event.control.update_cell_at((event.cursor_row, 0), "[ ]")
+                    event.control.update_cell_at((event.cursor_row, 0), "\\[ ]")
                 else:
                     self.selected_toolboxes.add(name)
-                    event.control.update_cell_at((event.cursor_row, 0), "[x]")
+                    event.control.update_cell_at((event.cursor_row, 0), "\\[x]")
                 
                 btn_enter = self.query_one("#btn_enter", Button)
                 btn_enter.disabled = len(self.selected_toolboxes) != 1
@@ -345,10 +370,11 @@ class LlamaCockpitApp(App):
                 else:
                     status_fmt = "[green]Running[/green]" if "Up" in tb.get("status", "") else "[blue]Downloaded[/blue]"
                 
-                sel_fmt = "[x]" if tb['name'] in getattr(self, 'selected_toolboxes', set()) else "[ ]"
+                sel_fmt = "\\[x]" if tb['name'] in getattr(self, 'selected_toolboxes', set()) else "\\[ ]"
                 table.add_row(sel_fmt, tb['name'], tb.get('description', ''), status_fmt, tb.get('created', ''), "")
                 
-            col = Collapsible(table, title=f"{group_name} ({len(toolboxes)})", collapsed=collapsed)
+            btn_toggle = Button("Select/Deselect All", id=f"btn_toggle_{table.id}", classes="btn-toggle-all")
+            col = Collapsible(Vertical(btn_toggle, table), title=f"{group_name} ({len(toolboxes)})", collapsed=collapsed)
             container.mount(col)
             
         def finish_mounting():
@@ -510,6 +536,38 @@ class LlamaCockpitApp(App):
                     print(f"\\nStarting server with command:\\n{' '.join(cmd)}\\n")
                     print("Press Ctrl+C to stop the server and return to the UI.\\n")
                     subprocess.run(cmd)
+        elif event.button.id and event.button.id.startswith("btn_toggle_dt_"):
+            dt_id = event.button.id.replace("btn_toggle_", "")
+            dt = self.query_one(f"#{dt_id}", DataTable)
+            
+            all_selected = True
+            for i in range(dt.row_count):
+                name = dt.get_cell_at((i, 1))
+                if name not in self.selected_toolboxes:
+                    all_selected = False
+                    break
+                    
+            if all_selected:
+                for i in range(dt.row_count):
+                    name = dt.get_cell_at((i, 1))
+                    if name in self.selected_toolboxes:
+                        self.selected_toolboxes.remove(name)
+                    dt.update_cell_at((i, 0), "\\[ ]")
+            else:
+                for i in range(dt.row_count):
+                    name = dt.get_cell_at((i, 1))
+                    self.selected_toolboxes.add(name)
+                    dt.update_cell_at((i, 0), "\\[x]")
+                    
+            btn_enter = self.query_one("#btn_enter", Button)
+            btn_enter.disabled = len(self.selected_toolboxes) != 1
+        elif event.button.id == "btn_save_models_path":
+            new_path = self.query_one("#inp_models_dir", Input).value
+            if save_models_dir(new_path):
+                self.notify(f"Models directory updated to {new_path}")
+                self.refresh_models()
+            else:
+                self.notify("Failed to save models directory config.", severity="error")
         elif event.button.id == "btn_download":
             repo = self.query_one("#sel_download_model", SearchableSelect).value
             if repo:
