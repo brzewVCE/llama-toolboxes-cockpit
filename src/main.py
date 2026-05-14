@@ -3,7 +3,7 @@ from textual.theme import Theme
 from textual import on, events, work
 from textual.widgets import Header, Footer, TabbedContent, TabPane, Button, Static, Label, Input, Checkbox, DataTable, Collapsible
 from textual.containers import Vertical, Horizontal, VerticalScroll
-from textual_autocomplete import AutoComplete
+from textual_autocomplete import AutoComplete, DropdownItem
 import os
 import subprocess
 
@@ -496,16 +496,16 @@ class LlamaCockpitApp(App):
 
 
     def _get_engine_candidates(self, state):
-        return [label for label, val in self._engine_options]
+        return [DropdownItem(main=label) for label, val in self._engine_options]
 
     def _get_image_candidates(self, state):
-        return [label for label, val in self._image_options]
+        return [DropdownItem(main=label) for label, val in self._image_options]
 
     def _get_model_candidates(self, state):
-        return [label for label, val in self._model_options]
+        return [DropdownItem(main=label) for label, val in self._model_options]
 
     def _get_download_candidates(self, state):
-        return [label for label, val in self._download_options]
+        return [DropdownItem(main=label) for label, val in self._download_options]
 
     def _lookup_option(self, options, input_text):
         """Look up the value for a given input text in an options list."""
