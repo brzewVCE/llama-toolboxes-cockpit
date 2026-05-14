@@ -1,7 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.theme import Theme
 from textual import on, events, work
-from textual.widgets import Header, Footer, TabbedContent, TabPane, Button, Static, Label, Input, Checkbox, DataTable, Collapsible
+from textual.widgets import Header, Footer, TabbedContent, TabPane, Button, Static, Label, Input, Checkbox, DataTable, Collapsible, Select
 from textual.containers import Vertical, Horizontal, VerticalScroll
 import os
 import subprocess
@@ -93,10 +93,8 @@ class LlamaCockpitApp(App):
         content-align: left middle;
     }
 
-    .inline-row SearchableSelect {
+    .inline-row Select {
         width: 1fr;
-        height: auto;
-        max-height: 3;
     }
 
     .inline-row Input {
@@ -303,17 +301,17 @@ class LlamaCockpitApp(App):
                     Static("Launch a Llama.cpp inference server directly without entering an interactive environment.", classes="box"),
                     Horizontal(
                         Label("Engine", classes="inline-label"),
-                        SearchableSelect(prompt="Select Container Engine", id="sel_engine"),
+                        Select([], id="sel_engine", prompt="Select Container Engine"),
                         classes="inline-row"
                     ),
                     Horizontal(
                         Label("Image", classes="inline-label"),
-                        SearchableSelect(prompt="Select Toolbox Image", id="sel_image"),
+                        Select([], id="sel_image", prompt="Select Toolbox Image"),
                         classes="inline-row"
                     ),
                     Horizontal(
                         Label("Model", classes="inline-label"),
-                        SearchableSelect(prompt="Select Local Model", id="sel_model"),
+                        Select([], id="sel_model", prompt="Select Local Model"),
                         classes="inline-row"
                     ),
                     Horizontal(
@@ -378,7 +376,7 @@ class LlamaCockpitApp(App):
         self.refresh_models()
         
         engines = detect_engines()
-        sel_engine = self.query_one("#sel_engine", SearchableSelect)
+        sel_engine = self.query_one("#sel_engine", Select)
         sel_engine.set_options([(e, e) for e in engines])
         if engines:
             sel_engine.value = engines[0]
@@ -504,19 +502,19 @@ class LlamaCockpitApp(App):
         self.refresh_server_images()
 
     def refresh_server_images(self):
-        sel_engine = self.query_one("#sel_engine", SearchableSelect)
+        sel_engine = self.query_one("#sel_engine", Select)
         engine = sel_engine.value
-        if not engine: return
+        if not engine or engine == Select.BLANK: return
         
         installed = get_installed_toolboxes(get_official_registry(), engine)
-        sel_image = self.query_one("#sel_image", SearchableSelect)
+        sel_image = self.query_one("#sel_image", Select)
         images = sorted(set([tb['image'] for tb in installed]))
         sel_image.set_options([(img, img) for img in images])
         if images:
             sel_image.value = images[0]
 
-    @on(SearchableSelect.Changed, "#sel_engine")
-    def on_engine_selected(self, event: SearchableSelect.Changed):
+    @on(Select.Changed, "#sel_engine")
+    def on_engine_selected(self, event: Select.Changed):
         self.refresh_server_images()
 
     def refresh_models(self):
@@ -526,7 +524,7 @@ class LlamaCockpitApp(App):
         dt.clear(columns=True)
         dt.add_columns("Local GGUF Models")
         
-        sel_model = self.query_one("#sel_model", SearchableSelect)
+        sel_model = self.query_one("#sel_model", Select)
         model_opts = []
         
         for m in models:
@@ -658,9 +656,9 @@ class LlamaCockpitApp(App):
     # ── Server Handler ────────────────────────────────────────────
 
     def _handle_start_server(self):
-        engine = self.query_one("#sel_engine", SearchableSelect).value
-        image = self.query_one("#sel_image", SearchableSelect).value
-        model_path = self.query_one("#sel_model", SearchableSelect).value
+        engine = self.query_one("#sel_engine", Select).value
+        image = self.query_one("#sel_image", Select).value
+        model_path = self.query_one("#sel_model", Select).value
         ctx = self.query_one("#inp_ctx", Input).value
         host = self.query_one("#inp_host", Input).value
         port = self.query_one("#inp_port", Input).value
