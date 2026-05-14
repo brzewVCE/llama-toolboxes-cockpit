@@ -1,0 +1,542 @@
+from textual.app import App, ComposeResult
+from textual.theme import Theme
+from textual import on, events
+from textual.widgets import Header, Footer, TabbedContent, TabPane, Button, Static, Label, Input, Checkbox, DataTable, Collapsible
+from textual.containers import Vertical, Horizontal, VerticalScroll
+import os
+import subprocess
+
+from src.toolbox_manager import get_all_toolboxes, get_installed_toolboxes, detect_engines, get_os_toolbox_cmd, get_remote_image_date, create_toolbox, delete_toolbox
+from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd
+from src.server_runner import build_server_cmd
+from src.config import load_models, get_official_registry, load_toolboxes
+from src.widgets import SearchableSelect
+import pyfiglet
+
+def generate_banner() -> str:
+    ascii_art = pyfiglet.figlet_format("Llama.cpp Cockpit", font="small")
+    return f"[green]{ascii_art}[/green]"
+
+class LlamaCockpitApp(App):
+    TITLE = "Llama.cpp Cockpit"
+    CSS = """
+    DataTable > .datatable--cursor {
+        background: #333333;
+        color: auto;
+        text-style: none;
+    }
+    
+    DataTable.inactive-table > .datatable--cursor {
+        background: transparent;
+        text-style: none;
+    }
+    
+    DataTable > .datatable--header {
+        background: #2a2a2a;
+    }
+    
+    OptionList > .option-list--option-highlighted {
+        background: transparent;
+        color: #e57373;
+        text-style: bold;
+    }
+    
+    Header {
+        background: #d32f2f;
+    }
+    
+    Tab, Tab:hover, Tab:focus, Tab.-active {
+        background: transparent !important;
+    }
+    
+    Tab:focus {
+        color: #e57373 !important;
+        text-style: bold;
+    }
+    
+    Underline > .underline--active {
+        background: #d32f2f !important;
+    }
+    
+    Tabs .underline--active {
+        background: #d32f2f !important;
+    }
+    
+    Tabs:focus .underline--active {
+        background: #d32f2f !important;
+    }
+    
+    Tab.-active {
+        color: #e57373 !important;
+    }
+    
+    .field-label {
+        margin-top: 0;
+        margin-bottom: 0;
+        text-style: bold;
+        color: #e57373;
+    }
+    
+    #banner {
+        text-align: center;
+        margin-bottom: 0;
+        height: auto;
+        text-style: bold;
+    }
+    
+    TabbedContent { height: 1fr; }
+    
+    TabPane { 
+        padding: 1 2; 
+    }
+    
+    .box { 
+        padding: 1 2; 
+        margin-bottom: 1; 
+        background: $surface; 
+        border: round #d32f2f; 
+        color: $text;
+        text-style: bold;
+        text-align: center;
+        height: auto;
+    }
+    
+    #btn_row { 
+        margin-top: 1; 
+        height: auto; 
+        align: left middle;
+    }
+    
+    Button {
+        margin-right: 1;
+        height: 1;
+        border: none;
+        min-width: 12;
+    }
+    
+    SearchableSelect {
+        height: auto;
+        margin: 0;
+    }
+    
+    #search_options {
+        border: solid #d32f2f;
+        height: auto;
+        max-height: 10;
+        margin: 0;
+    }
+    
+    .hidden {
+        display: none;
+    }
+    
+    .visible {
+        display: block;
+    }
+    
+    #host_port_row {
+        height: auto;
+    }
+    
+    #host_port_row Vertical {
+        width: 1fr;
+        height: auto;
+    }
+    
+    #inp_host, #inp_port {
+        width: 1fr;
+    }
+    
+    #toolbox_container {
+        height: 1fr;
+    }
+    
+    #toolbox_container DataTable {
+        height: auto;
+        border: none;
+        margin-bottom: 1;
+    }
+    
+    #local_model_list {
+        border: solid #d32f2f;
+        height: 1fr;
+    }
+    
+    Input, Checkbox {
+        margin: 0;
+    }
+    
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        yield Static(generate_banner(), id="banner")
+        with TabbedContent(initial="tab-toolboxes"):
+            with TabPane("Interactive Toolboxes", id="tab-toolboxes"):
+                yield Vertical(
+                    Static("A useful interactive shell from where to access llama.cpp cli tools.", classes="box"),
+                    VerticalScroll(id="toolbox_container"),
+                    Horizontal(
+                        Button("Enter", id="btn_enter", variant="success"),
+                        Button("Create/Update", id="btn_create_update", variant="warning"),
+                        Button("Delete", id="btn_delete", variant="error"),
+                        Button("Check Updates", id="btn_check_updates"),
+                        Button("Refresh", id="btn_refresh"),
+                        id="btn_row"
+                    )
+                )
+            with TabPane("Server Mode", id="tab-server"):
+                yield VerticalScroll(
+                    Static("Launch a Llama.cpp inference server directly without entering an interactive environment.", classes="box"),
+                    Label("Container Engine", classes="field-label"),
+                    SearchableSelect(prompt="Select Container Engine", id="sel_engine"),
+                    Label("Toolbox Image", classes="field-label"),
+                    SearchableSelect(prompt="Select Toolbox Image", id="sel_image"),
+                    Label("Local Model", classes="field-label"),
+                    SearchableSelect(prompt="Select Local Model", id="sel_model"),
+                    Label("Context Size", classes="field-label"),
+                    Input(placeholder="Context Size (e.g. 12288)", id="inp_ctx", value="12288"),
+                    Horizontal(
+                        Vertical(Label("Host", classes="field-label"), Input(placeholder="Host (e.g. localhost)", id="inp_host", value="localhost")),
+                        Vertical(Label("Port", classes="field-label"), Input(placeholder="Port (e.g. 8080)", id="inp_port", value="8080")),
+                        id="host_port_row"
+                    ),
+                    Label("Options", classes="field-label"),
+                    Checkbox("Enable Flash Attention (-fa 1)", id="chk_fa", value=True),
+                    Label("Additional Parameters", classes="field-label"),
+                    Input(placeholder="Additional Parameters (e.g. --batch-size 512)", id="inp_custom_args", value="--jinja"),
+                    Horizontal(
+                        Button("Start Server", id="btn_start_server", variant="primary"),
+                        id="btn_row"
+                    )
+                )
+            with TabPane("Model Manager", id="tab-models"):
+                yield Vertical(
+                    Static("Download and manage GGUF models for inference.", classes="box"),
+                    DataTable(id="local_model_list", cursor_type="row"),
+                    Horizontal(
+                        SearchableSelect(prompt="Download Curated Model", id="sel_download_model"),
+                        Button("Download", id="btn_download", variant="success"),
+                        Button("Scan Local", id="btn_scan_models"),
+                        id="btn_row"
+                    )
+                )
+        yield Footer()
+
+    def on_mount(self):
+        cockpit_theme = Theme(
+            name="cockpit-red",
+            primary="#d32f2f",
+            secondary="#b71c1c",
+            accent="#e57373",
+            foreground="#ffffff",
+            background="#121212",
+            surface="#1e1e1e",
+            panel="#2a2a2a",
+            warning="#ffa000",
+            error="#d32f2f",
+            success="#4caf50",
+            dark=True,
+        )
+        self.register_theme(cockpit_theme)
+        self.theme = "cockpit-red"
+        
+        self.selected_toolboxes = set()
+        self.refresh_toolboxes()
+        self.refresh_models()
+        
+        engines = detect_engines()
+        sel_engine = self.query_one("#sel_engine", SearchableSelect)
+        sel_engine.set_options([(e, e) for e in engines])
+        if engines:
+            sel_engine.value = engines[0]
+
+        curated = load_models()
+        sel_dl = self.query_one("#sel_download_model", SearchableSelect)
+        sel_dl.set_options([(m["name"], m["repo"]) for m in curated])
+
+    @on(DataTable.RowSelected)
+    def on_row_selected(self, event: DataTable.RowSelected):
+        if event.control.id and event.control.id.startswith("dt_"):
+            try:
+                name = event.control.get_cell_at((event.cursor_row, 1))
+                if name in self.selected_toolboxes:
+                    self.selected_toolboxes.remove(name)
+                    event.control.update_cell_at((event.cursor_row, 0), "[ ]")
+                else:
+                    self.selected_toolboxes.add(name)
+                    event.control.update_cell_at((event.cursor_row, 0), "[x]")
+                
+                btn_enter = self.query_one("#btn_enter", Button)
+                btn_enter.disabled = len(self.selected_toolboxes) != 1
+            except Exception:
+                pass
+
+    @on(DataTable.RowHighlighted)
+    def on_row_highlighted(self, event: DataTable.RowHighlighted):
+        if getattr(self, "_mounting_tables", False):
+            return
+            
+        if event.control.id and event.control.id.startswith("dt_"):
+            try:
+                name = event.control.get_cell_at((event.cursor_row, 1))
+                self.active_toolbox_name = name
+                
+                for dt in self.query(DataTable):
+                    if dt.id and dt.id.startswith("dt_"):
+                        if dt == event.control:
+                            dt.remove_class("inactive-table")
+                        else:
+                            dt.add_class("inactive-table")
+            except Exception:
+                pass
+
+    def on_descendant_focus(self, event: events.DescendantFocus):
+        widget = event.widget
+        if isinstance(widget, DataTable) and widget.id and widget.id.startswith("dt_"):
+            for dt in self.query(DataTable):
+                if dt.id and dt.id.startswith("dt_"):
+                    if dt == widget:
+                        dt.remove_class("inactive-table")
+                        try:
+                            self.active_toolbox_name = dt.get_cell_at((dt.cursor_row, 1))
+                        except Exception:
+                            pass
+                    else:
+                        dt.add_class("inactive-table")
+
+    def get_selected_toolboxes(self):
+        tb_dict = getattr(self, 'toolboxes_dict', {})
+        selected = []
+        if getattr(self, 'selected_toolboxes', set()):
+            for name in self.selected_toolboxes:
+                if name in tb_dict:
+                    selected.append(tb_dict[name])
+        return selected
+
+    def get_selected_toolbox(self):
+        tb_dict = getattr(self, 'toolboxes_dict', {})
+        if getattr(self, 'selected_toolboxes', set()) and len(self.selected_toolboxes) == 1:
+            return tb_dict.get(list(self.selected_toolboxes)[0])
+        return None
+
+    def refresh_toolboxes(self):
+        self._mounting_tables = True
+        
+        config_data = load_toolboxes()
+        grouped_data = get_all_toolboxes(get_official_registry(), config_data)
+        
+        self.toolboxes_dict = {}
+        
+        container = self.query_one("#toolbox_container", VerticalScroll)
+        container.remove_children()
+        
+        for group_name, toolboxes in grouped_data.items():
+            if not toolboxes: continue
+            collapsed = group_name != "Official Toolboxes"
+            table = DataTable(id=f"dt_{group_name.replace(' ', '_').replace('/', '')}", cursor_type="row")
+            table.add_class("inactive-table")
+            table.add_columns("Sel", "Toolbox Name", "Description", "Status", "Created", "Latest Release")
+            
+            for tb in toolboxes:
+                self.toolboxes_dict[tb["name"]] = tb
+                if tb["status"] == "Not Installed":
+                    status_fmt = "[red]Needs Download[/red]"
+                else:
+                    status_fmt = "[green]Running[/green]" if "Up" in tb.get("status", "") else "[blue]Downloaded[/blue]"
+                
+                sel_fmt = "[x]" if tb['name'] in getattr(self, 'selected_toolboxes', set()) else "[ ]"
+                table.add_row(sel_fmt, tb['name'], tb.get('description', ''), status_fmt, tb.get('created', ''), "")
+                
+            col = Collapsible(table, title=f"{group_name} ({len(toolboxes)})", collapsed=collapsed)
+            container.mount(col)
+            
+        def finish_mounting():
+            first = True
+            for dt in self.query(DataTable):
+                if dt.id and dt.id.startswith("dt_"):
+                    if first and dt.row_count > 0:
+                        dt.remove_class("inactive-table")
+                        try:
+                            self.active_toolbox_name = dt.get_cell_at((dt.cursor_row, 1))
+                        except Exception:
+                            pass
+                        first = False
+                    else:
+                        dt.add_class("inactive-table")
+            btn_enter = self.query_one("#btn_enter", Button)
+            btn_enter.disabled = len(getattr(self, 'selected_toolboxes', set())) != 1
+            self._mounting_tables = False
+            
+        self.call_next(finish_mounting)
+        
+        self.refresh_server_images()
+
+    def refresh_server_images(self):
+        sel_engine = self.query_one("#sel_engine", SearchableSelect)
+        engine = sel_engine.value
+        if not engine: return
+        
+        installed = get_installed_toolboxes(get_official_registry(), engine)
+        sel_image = self.query_one("#sel_image", SearchableSelect)
+        images = set([tb['image'] for tb in installed])
+        sel_image.set_options([(img, img) for img in images])
+
+    @on(SearchableSelect.Changed, "#sel_engine")
+    def on_engine_selected(self, event: SearchableSelect.Changed):
+        self.refresh_server_images()
+
+    def refresh_models(self):
+        models = scan_local_models()
+        self.current_models = models
+        dt = self.query_one("#local_model_list", DataTable)
+        dt.clear(columns=True)
+        dt.add_columns("Local GGUF Models")
+        
+        sel_model = self.query_one("#sel_model", SearchableSelect)
+        model_opts = []
+        
+        for m in models:
+            dt.add_row(m["name"])
+            model_opts.append((m["name"], m["path"]))
+            
+        sel_model.set_options(model_opts)
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "btn_refresh":
+            self.refresh_toolboxes()
+        elif event.button.id == "btn_scan_models":
+            self.refresh_models()
+        elif event.button.id == "btn_check_updates":
+            for dt in self.query(DataTable):
+                if dt.id and dt.id.startswith("dt_"):
+                    for row_idx in range(dt.row_count):
+                        name = dt.get_cell_at((row_idx, 1))
+                        tb = self.toolboxes_dict.get(name)
+                        if tb:
+                            with self.suspend():
+                                print(f"Checking updates for {tb['image']} on Docker Hub...")
+                            remote_date = get_remote_image_date(tb['image'])
+                            if remote_date:
+                                remote_date_str = remote_date[:10]
+                                dt.update_cell_at((row_idx, 5), remote_date_str)
+                                created_date = dt.get_cell_at((row_idx, 4))
+                                if created_date and remote_date_str > created_date:
+                                    dt.update_cell_at((row_idx, 3), "[yellow]Needs Update[/yellow]")
+        elif event.button.id == "btn_delete":
+            tbs = self.get_selected_toolboxes()
+            tbs = [tb for tb in tbs if tb["status"] != "Not Installed"]
+            if tbs:
+                with self.suspend():
+                    names = ", ".join([tb['name'] for tb in tbs])
+                    ans = input(f"\\nAre you sure you want to delete: {names}? [y/N]: ")
+                    if ans.lower() == 'y':
+                        for tb in tbs:
+                            print(f"Deleting {tb['name']}...")
+                            delete_toolbox(tb['name'])
+                self.selected_toolboxes.clear()
+                self.refresh_toolboxes()
+        elif event.button.id == "btn_create_update":
+            tbs = self.get_selected_toolboxes()
+            if tbs:
+                with self.suspend():
+                    to_create = []
+                    to_update = []
+                    already_updated = []
+                    
+                    print("\\nChecking latest image versions from registry...")
+                    for tb in tbs:
+                        if tb["status"] == "Not Installed":
+                            to_create.append(tb)
+                        else:
+                            remote_date = get_remote_image_date(tb['image'])
+                            if remote_date:
+                                remote_date_str = remote_date[:10]
+                                if tb.get('created') and remote_date_str > tb.get('created', ''):
+                                    to_update.append(tb)
+                                else:
+                                    already_updated.append(tb)
+                            else:
+                                already_updated.append(tb)
+                    
+                    if already_updated:
+                        print("\\nThe following toolboxes are already up-to-date:")
+                        for tb in already_updated:
+                            print(f"  - {tb['name']}")
+                    
+                    if not to_create and not to_update:
+                        input("\\nNothing to do. Press Enter to return to UI...")
+                        self.selected_toolboxes.clear()
+                        self.refresh_toolboxes()
+                        return
+                        
+                    if to_update:
+                        names = ", ".join([tb['name'] for tb in to_update])
+                        print(f"\\nWARNING: The following toolboxes have updates available and will be DELETED and RECREATED:")
+                        print(f"  {names}")
+                        ans = input("Any manually installed packages via apt/dnf inside them will be lost. Continue? [y/N]: ")
+                        if ans.lower() != 'y': return
+                        
+                        for tb in to_update:
+                            delete_toolbox(tb['name'])
+                    
+                    for tb in to_create + to_update:
+                        print(f"\\nDownloading and creating toolbox {tb['name']}...")
+                        create_toolbox(tb['name'], tb['image'], tb.get('args', []))
+                    
+                    input("\\nSuccess! Press Enter to return to UI...")
+                self.selected_toolboxes.clear()
+                self.refresh_toolboxes()
+        elif event.button.id == "btn_enter":
+            tb = self.get_selected_toolbox()
+            if tb:
+                if tb["status"] == "Not Installed": return
+                cmd = get_os_toolbox_cmd()
+                with self.suspend():
+                    os.system(f"{cmd} enter {tb['name']}")
+        elif event.button.id == "btn_start_server":
+            engine = self.query_one("#sel_engine", SearchableSelect).value
+            image = self.query_one("#sel_image", SearchableSelect).value
+            model_path = self.query_one("#sel_model", SearchableSelect).value
+            ctx = self.query_one("#inp_ctx", Input).value
+            host = self.query_one("#inp_host", Input).value
+            port = self.query_one("#inp_port", Input).value
+            use_fa = self.query_one("#chk_fa", Checkbox).value
+            custom_args = self.query_one("#inp_custom_args", Input).value
+            
+            if engine and image and model_path and ctx.isdigit():
+                cmd = build_server_cmd(engine, image, model_path, int(ctx), use_fa, custom_args, host, port)
+                with self.suspend():
+                    print(f"\\nStarting server with command:\\n{' '.join(cmd)}\\n")
+                    print("Press Ctrl+C to stop the server and return to the UI.\\n")
+                    subprocess.run(cmd)
+        elif event.button.id == "btn_download":
+            repo = self.query_one("#sel_download_model", SearchableSelect).value
+            if repo:
+                with self.suspend():
+                    print(f"\\nQuerying Hugging Face for {repo}...")
+                    quants = get_hf_quants(repo)
+                    if not quants:
+                        print("No GGUF quants found.")
+                        input("Press Enter to return...")
+                        return
+                        
+                    print("\\nAvailable Quantizations:")
+                    for i, q in enumerate(quants):
+                        print(f"[{i}] {q}")
+                        
+                    choice = input("\\nSelect number to download (or press Enter to cancel): ")
+                    if choice.isdigit() and 0 <= int(choice) < len(quants):
+                        cmd = get_download_cmd(repo, quants[int(choice)])
+                        print(f"\\nRunning: {' '.join(cmd)}")
+                        subprocess.run(cmd)
+                        print("\\nDownload Complete!")
+                    input("\\nPress Enter to return to UI...")
+                self.refresh_models()
+
+def cli_main():
+    app = LlamaCockpitApp()
+    app.run()
+
+if __name__ == "__main__":
+    cli_main()

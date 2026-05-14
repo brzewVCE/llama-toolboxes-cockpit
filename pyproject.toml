@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llama-cockpit"
+version = "0.1.0"
+description = "A TUI for managing AMD Strix Halo Llama.cpp toolboxes and models."
+authors = [{name = "kyuz0"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "textual>=0.85.2",
+    "huggingface_hub>=0.23.0",
+    "questionary>=2.0.1",
+    "rich>=13.0.0",
+    "pyfiglet>=1.0.2"
+]
+
+[project.scripts]
+llama-cockpit = "src.main:cli_main"
+
+[tool.setuptools]
+packages = [
+    "src"
+]
+
+[tool.setuptools.package-data]
+"src" = ["assets/*.json"]
