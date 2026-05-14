@@ -1,6 +1,8 @@
 import os
 import re
 import glob
+import json
+import fnmatch
 from huggingface_hub import HfApi
 from pathlib import Path
 
@@ -58,6 +60,44 @@ def scan_local_models() -> list[dict]:
                     found.add(str(rel_path))
                     
     return [{"name": m, "path": str(models_dir / m)} for m in sorted(list(found))]
+
+def is_quant_downloaded(repo: str, quant: str) -> bool:
+    models_dir = get_models_dir()
+    if not models_dir.exists():
+        return False
+        
+    repo_base = repo.split('/')[-1].replace('-GGUF', '').lower()
+    
+    # 1. Exact path match based on standard download dir
+    standard_dir = models_dir / repo.split('/')[-1]
+    if (standard_dir / quant).exists():
+        return True
+        
+    # 2. Fuzzy scan across models_dir
+    for root, dirs, files in os.walk(models_dir):
+        # check files
+        if quant.endswith(".gguf"):
+            if "*" in quant:
+                for f in files:
+                    if fnmatch.fnmatch(f, quant):
+                        return True
+            else:
+                if quant in files:
+                    return True
+        else:
+            # quant is a folder name like "BF16"
+            if quant in dirs:
+                parent_name = os.path.basename(root).lower()
+                if repo_base in parent_name or parent_name in repo_base:
+                    return True
+                try:
+                    for f in os.listdir(os.path.join(root, quant)):
+                        if repo_base in f.lower():
+                            return True
+                except OSError:
+                    pass
+                        
+    return False
 
 def resolve_model_path(pattern_path: str) -> str:
     """Resolves a pattern like *-of-*.gguf to the first actual file."""

@@ -7,7 +7,7 @@ import os
 import subprocess
 
 from src.toolbox_manager import get_all_toolboxes, get_installed_toolboxes, detect_engines, get_os_toolbox_cmd, get_remote_image_date, create_toolbox, delete_toolbox
-from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir
+from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir, is_quant_downloaded
 from src.server_runner import build_server_cmd
 from src.config import load_models, get_official_registry, load_toolboxes
 from src.widgets import SearchableSelect, ConfirmModal, SelectModal
@@ -630,8 +630,28 @@ class LlamaCockpitApp(App):
                         input("Press Enter to return...")
                     return
                     
-                choice_idx = await self.app.push_screen(SelectModal("Available Quantizations:", quants))
+                # Build rich text options indicating installation status
+                display_options = []
+                installed_flags = []
+                
+                with self.suspend():
+                    print("\nChecking local installation status...")
+                    
+                for q in quants:
+                    if is_quant_downloaded(repo, q):
+                        display_options.append(f"[green][Installed][/green] {q}")
+                        installed_flags.append(True)
+                    else:
+                        display_options.append(q)
+                        installed_flags.append(False)
+                        
+                choice_idx = await self.app.push_screen(SelectModal("Available Quantizations:", display_options))
                 if choice_idx is not None and 0 <= choice_idx < len(quants):
+                    if installed_flags[choice_idx]:
+                        confirmed = await self.app.push_screen(ConfirmModal(f"The quant {quants[choice_idx]} appears to be already downloaded.\nDo you want to download it anyway?"))
+                        if not confirmed:
+                            return
+                            
                     cmd = get_download_cmd(repo, quants[choice_idx])
                     with self.suspend():
                         print(f"\nRunning: {' '.join(cmd)}")
