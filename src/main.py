@@ -328,6 +328,7 @@ class LlamaCockpitApp(App):
                     ),
                     Horizontal(
                         Horizontal(Label("Context", classes="inline-label"), Input(placeholder="12288", id="inp_ctx", value="12288"), classes="short-field"),
+                        Horizontal(Label("NGL", classes="inline-label"), Input(placeholder="999", id="inp_ngl", value="999"), classes="short-field"),
                         Horizontal(Label("Host", classes="inline-label"), Input(placeholder="localhost", id="inp_host", value="localhost"), classes="short-field"),
                         Horizontal(Label("Port", classes="inline-label"), Input(placeholder="8080", id="inp_port", value="8080"), classes="short-field"),
                         classes="inline-row"
@@ -546,6 +547,19 @@ class LlamaCockpitApp(App):
     def on_engine_selected(self, event: Select.Changed):
         self.refresh_server_images()
 
+    @on(Select.Changed, "#sel_model")
+    def on_model_selected(self, event: Select.Changed):
+        """When a model is selected, append any custom_params from models.json to extra args."""
+        curated = load_models()
+        custom_args_input = self.query_one("#inp_custom_args", Input)
+        # Start with base default
+        base_args = "--jinja"
+        for m in curated:
+            if m.get("repo") == event.value and m.get("custom_params"):
+                base_args = f"--jinja {m['custom_params']}"
+                break
+        custom_args_input.value = base_args
+
     def refresh_models(self):
         models = scan_local_models()
         self.current_models = models
@@ -720,6 +734,7 @@ class LlamaCockpitApp(App):
         image = self.query_one("#sel_image", Select).value
         model_path = self.query_one("#sel_model", Select).value
         ctx = self.query_one("#inp_ctx", Input).value
+        ngl = self.query_one("#inp_ngl", Input).value
         host = self.query_one("#inp_host", Input).value
         port = self.query_one("#inp_port", Input).value
         use_fa = self.query_one("#chk_fa", Checkbox).value
@@ -727,7 +742,8 @@ class LlamaCockpitApp(App):
         custom_args = self.query_one("#inp_custom_args", Input).value
 
         if engine and image and model_path and ctx.isdigit():
-            cmd = build_server_cmd(engine, image, model_path, int(ctx), use_fa, use_no_mmap, custom_args, host, port)
+            ngl_val = int(ngl) if ngl.isdigit() else 999
+            cmd = build_server_cmd(engine, image, model_path, int(ctx), use_fa, use_no_mmap, custom_args, host, port, ngl_val)
             with self.suspend():
                 print(f"\nStarting server with command:\n{' '.join(cmd)}\n")
                 print("Press Ctrl+C to stop the server and return to the UI.\n")

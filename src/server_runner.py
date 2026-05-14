@@ -3,7 +3,7 @@ from .model_manager import resolve_model_path
 
 import shlex
 
-def build_server_cmd(engine: str, image: str, model_path: str, context_size: int, use_fa: bool, use_no_mmap: bool, custom_args: str, host: str = "localhost", port: str = "8080") -> list[str]:
+def build_server_cmd(engine: str, image: str, model_path: str, context_size: int, use_fa: bool, use_no_mmap: bool, custom_args: str, host: str = "localhost", port: str = "8080", ngl: int = 999) -> list[str]:
     models_dir = os.path.expanduser("~/models")
     
     cmd = [
@@ -44,6 +44,7 @@ def build_server_cmd(engine: str, image: str, model_path: str, context_size: int
         "llama-server",
         "-m", inner_model_path,
         "-c", str(context_size),
+        "-ngl", str(ngl),
         "--host", "0.0.0.0",
         "--port", str(port)
     ])
