@@ -478,169 +478,218 @@ class LlamaCockpitApp(App):
         sel_model.set_options(model_opts)
 
     def on_button_pressed(self, event: Button.Pressed):
-        if event.button.id == "btn_refresh":
-            self.refresh_toolboxes()
-        elif event.button.id == "btn_scan_models":
-            self.refresh_models()
-        elif event.button.id == "btn_check_updates":
-            for dt in self.query(DataTable):
-                if dt.id and dt.id.startswith("dt_"):
-                    for row_idx in range(dt.row_count):
-                        name = dt.get_cell_at((row_idx, 1))
-                        tb = self.toolboxes_dict.get(name)
-                        if tb:
-                            with self.suspend():
-                                print(f"Checking updates for {tb['image']} on Docker Hub...")
-                            remote_date = get_remote_image_date(tb['image'])
-                            if remote_date:
-                                remote_date_str = remote_date[:10]
-                                dt.update_cell_at((row_idx, 5), remote_date_str)
-                                created_date = dt.get_cell_at((row_idx, 4))
-                                if created_date and remote_date_str > created_date:
-                                    dt.update_cell_at((row_idx, 3), "[yellow]Needs Update[/yellow]")
-        elif event.button.id == "btn_delete":
-            tbs = self.get_selected_toolboxes()
-            tbs = [tb for tb in tbs if tb["status"] != "Not Installed"]
-            if tbs:
-                names = ", ".join([tb['name'] for tb in tbs])
-                self._pending_delete_tbs = tbs
-                self.app.push_screen(ConfirmModal(f"Are you sure you want to delete: {names}?"), self._on_delete_confirmed)
-        elif event.button.id == "btn_create_update":
-            tbs = self.get_selected_toolboxes()
-            if tbs:
-                to_create = []
-                to_update = []
-                already_updated = []
-                
-                with self.suspend():
-                    print("\nChecking latest image versions from registry...")
-                for tb in tbs:
-                    if tb["status"] == "Not Installed":
-                        to_create.append(tb)
-                    else:
-                        remote_date = get_remote_image_date(tb['image'])
-                        if remote_date:
-                            remote_date_str = remote_date[:10]
-                            if tb.get('created') and remote_date_str > tb.get('created', ''):
-                                to_update.append(tb)
-                            else:
-                                already_updated.append(tb)
-                        else:
-                            already_updated.append(tb)
-                
-                if already_updated:
-                    with self.suspend():
-                        print("\nThe following toolboxes are already up-to-date:")
-                        for tb in already_updated:
-                            print(f"  - {tb['name']}")
-                
-                if not to_create and not to_update:
-                    with self.suspend():
-                        input("\nNothing to do. Press Enter to return to UI...")
-                    self.selected_toolboxes.clear()
-                    self.refresh_toolboxes()
-                    return
-                    
-                if to_update:
-                    names = ", ".join([tb['name'] for tb in to_update])
-                    warning_msg = f"The following toolboxes have updates available and will be DELETED and RECREATED:\n  {names}\n\nAny manually installed packages via apt/dnf inside them will be lost. Continue?"
-                    self._pending_update_tbs = to_update
-                    self._pending_create_tbs = to_create
-                    self.app.push_screen(ConfirmModal(warning_msg), self._on_update_confirmed)
-                else:
-                    self._do_create_toolboxes(to_create)
+        handlers = {
+            "btn_refresh": self._handle_refresh,
+            "btn_scan_models": self._handle_scan_models,
+            "btn_check_updates": self._handle_check_updates,
+            "btn_delete": self._handle_delete,
+            "btn_create_update": self._handle_create_update,
+            "btn_enter": self._handle_enter_toolbox,
+            "btn_start_server": self._handle_start_server,
+            "btn_save_models_path": self._handle_save_models_path,
+            "btn_download": self._handle_download,
+        }
 
-        elif event.button.id == "btn_enter":
-            tb = self.get_selected_toolbox()
-            if tb:
-                if tb["status"] == "Not Installed": return
-                cmd = get_os_toolbox_cmd()
-                with self.suspend():
-                    os.system(f"{cmd} enter {tb['name']}")
-        elif event.button.id == "btn_start_server":
-            engine = self.query_one("#sel_engine", SearchableSelect).value
-            image = self.query_one("#sel_image", SearchableSelect).value
-            model_path = self.query_one("#sel_model", SearchableSelect).value
-            ctx = self.query_one("#inp_ctx", Input).value
-            host = self.query_one("#inp_host", Input).value
-            port = self.query_one("#inp_port", Input).value
-            use_fa = self.query_one("#chk_fa", Checkbox).value
-            use_no_mmap = self.query_one("#chk_no_mmap", Checkbox).value
-            custom_args = self.query_one("#inp_custom_args", Input).value
-            
-            if engine and image and model_path and ctx.isdigit():
-                cmd = build_server_cmd(engine, image, model_path, int(ctx), use_fa, use_no_mmap, custom_args, host, port)
-                with self.suspend():
-                    print(f"\nStarting server with command:\n{' '.join(cmd)}\n")
-                    print("Press Ctrl+C to stop the server and return to the UI.\n")
-                    subprocess.run(cmd)
-        elif event.button.id and event.button.id.startswith("btn_toggle_dt_"):
-            dt_id = event.button.id.replace("btn_toggle_", "")
-            dt = self.query_one(f"#{dt_id}", DataTable)
-            
-            all_selected = True
-            for i in range(dt.row_count):
-                name = dt.get_cell_at((i, 1))
-                if name not in self.selected_toolboxes:
-                    all_selected = False
-                    break
-                    
-            if all_selected:
-                for i in range(dt.row_count):
-                    name = dt.get_cell_at((i, 1))
-                    if name in self.selected_toolboxes:
-                        self.selected_toolboxes.remove(name)
-                    dt.update_cell_at((i, 0), "\\[ ]")
+        btn_id = event.button.id
+        if btn_id in handlers:
+            handlers[btn_id]()
+        elif btn_id and btn_id.startswith("btn_toggle_dt_"):
+            self._handle_toggle_select_all(btn_id)
+
+    # ── Toolbox Handlers ──────────────────────────────────────────
+
+    def _handle_refresh(self):
+        self.refresh_toolboxes()
+
+    def _handle_check_updates(self):
+        tbs = self.get_selected_toolboxes()
+        if not tbs:
+            self.notify("No toolboxes selected.", severity="warning")
+            return
+        for tb in tbs:
+            with self.suspend():
+                print(f"Checking updates for {tb['image']} on Docker Hub...")
+            remote_date = get_remote_image_date(tb['image'])
+            if remote_date:
+                remote_date_str = remote_date[:10]
+                self._update_toolbox_cell(tb['name'], 5, remote_date_str)
+                created_date = self._get_toolbox_cell(tb['name'], 4)
+                if created_date and remote_date_str > created_date:
+                    self._update_toolbox_cell(tb['name'], 3, "[yellow]Needs Update[/yellow]")
+
+    def _handle_delete(self):
+        tbs = self.get_selected_toolboxes()
+        tbs = [tb for tb in tbs if tb["status"] != "Not Installed"]
+        if tbs:
+            names = ", ".join([tb['name'] for tb in tbs])
+            self._pending_delete_tbs = tbs
+            self.app.push_screen(
+                ConfirmModal(f"Are you sure you want to delete: {names}?"),
+                self._on_delete_confirmed
+            )
+
+    def _handle_create_update(self):
+        tbs = self.get_selected_toolboxes()
+        if not tbs:
+            return
+        to_create, to_update, already_updated = [], [], []
+
+        with self.suspend():
+            print("\nChecking latest image versions from registry...")
+        for tb in tbs:
+            if tb["status"] == "Not Installed":
+                to_create.append(tb)
             else:
-                for i in range(dt.row_count):
-                    name = dt.get_cell_at((i, 1))
-                    self.selected_toolboxes.add(name)
-                    dt.update_cell_at((i, 0), "\\[x]")
-                    
-            btn_enter = self.query_one("#btn_enter", Button)
-            btn_enter.disabled = len(self.selected_toolboxes) != 1
-        elif event.button.id == "btn_save_models_path":
-            new_path = self.query_one("#inp_models_dir", Input).value
-            if save_models_dir(new_path):
-                self.notify(f"Models directory updated to {new_path}")
-                self.refresh_models()
-            else:
-                self.notify("Failed to save models directory config.", severity="error")
-        elif event.button.id == "btn_download":
-            repo = self.query_one("#sel_download_model", SearchableSelect).value
-            if repo:
-                with self.suspend():
-                    print(f"\nQuerying Hugging Face for {repo}...")
-                quants = get_hf_quants(repo)
-                if not quants:
-                    with self.suspend():
-                        print("No GGUF quants found.")
-                        try: input("Press Enter to return...")
-                        except: pass
-                    return
-                    
-                # Build rich text options indicating installation status
-                display_options = []
-                installed_flags = []
-                
-                with self.suspend():
-                    print("\nChecking local installation status...")
-                    
-                for q in quants:
-                    if is_quant_downloaded(repo, q):
-                        display_options.append(f"[green]\u2713 Installed[/green]  {q}")
-                        installed_flags.append(True)
+                remote_date = get_remote_image_date(tb['image'])
+                if remote_date:
+                    remote_date_str = remote_date[:10]
+                    if tb.get('created') and remote_date_str > tb.get('created', ''):
+                        to_update.append(tb)
                     else:
-                        display_options.append(q)
-                        installed_flags.append(False)
-                        
-                self._download_quants = quants
-                self._download_installed_flags = installed_flags
-                self._download_repo = repo
-                self.app.push_screen(
-                    SelectModal("Available Quantizations:", display_options),
-                    self._on_quant_selected
-                )
+                        already_updated.append(tb)
+                else:
+                    already_updated.append(tb)
+
+        if already_updated:
+            with self.suspend():
+                print("\nThe following toolboxes are already up-to-date:")
+                for tb in already_updated:
+                    print(f"  - {tb['name']}")
+
+        if not to_create and not to_update:
+            with self.suspend():
+                input("\nNothing to do. Press Enter to return to UI...")
+            self.selected_toolboxes.clear()
+            self.refresh_toolboxes()
+            return
+
+        if to_update:
+            names = ", ".join([tb['name'] for tb in to_update])
+            warning_msg = (
+                f"The following toolboxes have updates available and will be DELETED and RECREATED:\n"
+                f"  {names}\n\n"
+                f"Any manually installed packages via apt/dnf inside them will be lost. Continue?"
+            )
+            self._pending_update_tbs = to_update
+            self._pending_create_tbs = to_create
+            self.app.push_screen(ConfirmModal(warning_msg), self._on_update_confirmed)
+        else:
+            self._do_create_toolboxes(to_create)
+
+    def _handle_enter_toolbox(self):
+        tb = self.get_selected_toolbox()
+        if tb and tb["status"] != "Not Installed":
+            cmd = get_os_toolbox_cmd()
+            with self.suspend():
+                os.system(f"{cmd} enter {tb['name']}")
+
+    # ── Server Handler ────────────────────────────────────────────
+
+    def _handle_start_server(self):
+        engine = self.query_one("#sel_engine", SearchableSelect).value
+        image = self.query_one("#sel_image", SearchableSelect).value
+        model_path = self.query_one("#sel_model", SearchableSelect).value
+        ctx = self.query_one("#inp_ctx", Input).value
+        host = self.query_one("#inp_host", Input).value
+        port = self.query_one("#inp_port", Input).value
+        use_fa = self.query_one("#chk_fa", Checkbox).value
+        use_no_mmap = self.query_one("#chk_no_mmap", Checkbox).value
+        custom_args = self.query_one("#inp_custom_args", Input).value
+
+        if engine and image and model_path and ctx.isdigit():
+            cmd = build_server_cmd(engine, image, model_path, int(ctx), use_fa, use_no_mmap, custom_args, host, port)
+            with self.suspend():
+                print(f"\nStarting server with command:\n{' '.join(cmd)}\n")
+                print("Press Ctrl+C to stop the server and return to the UI.\n")
+                subprocess.run(cmd)
+
+    # ── Toggle Select All ─────────────────────────────────────────
+
+    def _handle_toggle_select_all(self, btn_id: str):
+        dt_id = btn_id.replace("btn_toggle_", "")
+        dt = self.query_one(f"#{dt_id}", DataTable)
+
+        all_selected = all(
+            dt.get_cell_at((i, 1)) in self.selected_toolboxes
+            for i in range(dt.row_count)
+        )
+
+        for i in range(dt.row_count):
+            name = dt.get_cell_at((i, 1))
+            if all_selected:
+                self.selected_toolboxes.discard(name)
+                dt.update_cell_at((i, 0), "\\[ ]")
+            else:
+                self.selected_toolboxes.add(name)
+                dt.update_cell_at((i, 0), "\\[x]")
+
+        btn_enter = self.query_one("#btn_enter", Button)
+        btn_enter.disabled = len(self.selected_toolboxes) != 1
+
+    # ── Model Manager Handlers ────────────────────────────────────
+
+    def _handle_scan_models(self):
+        self.refresh_models()
+
+    def _handle_save_models_path(self):
+        new_path = self.query_one("#inp_models_dir", Input).value
+        if save_models_dir(new_path):
+            self.notify(f"Models directory updated to {new_path}")
+            self.refresh_models()
+        else:
+            self.notify("Failed to save models directory config.", severity="error")
+
+    def _handle_download(self):
+        repo = self.query_one("#sel_download_model", SearchableSelect).value
+        if not repo:
+            return
+        with self.suspend():
+            print(f"\nQuerying Hugging Face for {repo}...")
+        quants = get_hf_quants(repo)
+        if not quants:
+            with self.suspend():
+                print("No GGUF quants found.")
+                try: input("Press Enter to return...")
+                except: pass
+            return
+
+        display_options = []
+        installed_flags = []
+        with self.suspend():
+            print("\nChecking local installation status...")
+        for q in quants:
+            if is_quant_downloaded(repo, q):
+                display_options.append(f"[green]\u2713 Installed[/green]  {q}")
+                installed_flags.append(True)
+            else:
+                display_options.append(q)
+                installed_flags.append(False)
+
+        self._download_quants = quants
+        self._download_installed_flags = installed_flags
+        self._download_repo = repo
+        self.app.push_screen(
+            SelectModal("Available Quantizations:", display_options),
+            self._on_quant_selected
+        )
+
+    # ── DataTable Helpers ─────────────────────────────────────────
+
+    def _update_toolbox_cell(self, name: str, col: int, value: str):
+        for dt in self.query(DataTable):
+            if dt.id and dt.id.startswith("dt_"):
+                for row_idx in range(dt.row_count):
+                    if dt.get_cell_at((row_idx, 1)) == name:
+                        dt.update_cell_at((row_idx, col), value)
+                        return
+
+    def _get_toolbox_cell(self, name: str, col: int):
+        for dt in self.query(DataTable):
+            if dt.id and dt.id.startswith("dt_"):
+                for row_idx in range(dt.row_count):
+                    if dt.get_cell_at((row_idx, 1)) == name:
+                        return dt.get_cell_at((row_idx, col))
+        return None
 
     def _on_delete_confirmed(self, confirmed: bool) -> None:
         if confirmed:
