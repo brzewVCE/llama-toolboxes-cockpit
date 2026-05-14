@@ -1,7 +1,19 @@
 [
   {
-    "name": "GLM 4.7 Flash",
-    "repo": "unsloth/GLM-4.7-Flash-GGUF"
+    "name": "Qwen 3.5 122B A10B",
+    "repo": "unsloth/Qwen3.5-122B-A10B-GGUF"
+  },
+  {
+    "name": "Qwen 3.6 35B A3B",
+    "repo": "unsloth/Qwen3.6-35B-A3B-GGUF"
+  },
+  {
+    "name": "Qwen 3.6 27B",
+    "repo": "unsloth/Qwen3.6-27B-GGUF"
+  },
+  {
+    "name": "Qwen 3 Coder 30B A3B Instruct",
+    "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF"
   },
   {
     "name": "Gemma 4 26B A4B IT",
@@ -10,6 +22,14 @@
   {
     "name": "Gemma 4 31B IT",
     "repo": "unsloth/gemma-4-31B-it-GGUF"
+  },
+  {
+    "name": "Devstral 2 123B Instruct",
+    "repo": "unsloth/Devstral-2-123B-Instruct-2512-GGUF"
+  },
+  {
+    "name": "GLM 4.7 Flash",
+    "repo": "unsloth/GLM-4.7-Flash-GGUF"
   },
   {
     "name": "GPT OSS 120B",
@@ -34,21 +54,5 @@
   {
     "name": "Nemotron 3 Super 120B A12B",
     "repo": "unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF"
-  },
-  {
-    "name": "Qwen 3.5 122B A10B",
-    "repo": "unsloth/Qwen3.5-122B-A10B-GGUF"
-  },
-  {
-    "name": "Qwen 3.6 35B A3B",
-    "repo": "unsloth/Qwen3.6-35B-A3B-GGUF"
-  },
-  {
-    "name": "Qwen 3 Coder 30B A3B Instruct",
-    "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF"
-  },
-  {
-    "name": "Devstral 2 123B Instruct",
-    "repo": "unsloth/Devstral-2-123B-Instruct-2512-GGUF"
   }
 ]
