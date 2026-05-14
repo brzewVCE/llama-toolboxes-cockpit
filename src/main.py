@@ -417,7 +417,7 @@ class LlamaCockpitApp(App):
                 if tb["status"] == "Not Installed":
                     status_fmt = "[red]Needs Download[/red]"
                 else:
-                    status_fmt = "[green]Running[/green]" if "Up" in tb.get("status", "") else "[blue]Downloaded[/blue]"
+                    status_fmt = "[green]Running[/green]" if "Up" in tb.get("status", "") else "[dim]Downloaded[/dim]"
                 
                 sel_fmt = "\\[x]" if tb['name'] in getattr(self, 'selected_toolboxes', set()) else "\\[ ]"
                 table.add_row(sel_fmt, tb['name'], tb.get('description', ''), status_fmt, tb.get('created', ''), "")
