@@ -498,13 +498,12 @@ class LlamaCockpitApp(App):
             self._mounting_tables = False
             
         self.call_next(finish_mounting)
-        
-        self.refresh_server_images()
+
 
     def refresh_server_images(self):
         sel_engine = self.query_one("#sel_engine", Select)
         engine = sel_engine.value
-        if not engine or engine == Select.BLANK: return
+        if not isinstance(engine, str): return
         
         installed = get_installed_toolboxes(get_official_registry(), engine)
         sel_image = self.query_one("#sel_image", Select)
