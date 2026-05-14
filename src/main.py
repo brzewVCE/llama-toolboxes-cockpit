@@ -327,13 +327,13 @@ class LlamaCockpitApp(App):
                         Button("Save Path", id="btn_save_models_path"),
                         id="models_dir_row"
                     ),
-                    DataTable(id="local_model_list", cursor_type="row"),
                     Horizontal(
                         Select([], id="sel_download_model", prompt="Download Curated Model"),
                         Button("Download", id="btn_download", variant="success"),
                         Button("Scan Local", id="btn_scan_models"),
                         id="btn_row"
-                    )
+                    ),
+                    DataTable(id="local_model_list", cursor_type="row"),
                 )
         yield Footer()
 
