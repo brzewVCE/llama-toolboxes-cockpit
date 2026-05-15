@@ -1,7 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.theme import Theme
 from textual import on, events, work
-from textual.widgets import Header, Footer, TabbedContent, TabPane, Button, Static, Label, Input, Checkbox, DataTable, Collapsible, Select
+from textual.widgets import Header, Footer, TabbedContent, TabPane, Button, Static, Label, Input, Checkbox, DataTable, Collapsible
 from textual.containers import Vertical, Horizontal, VerticalScroll
 import os
 import subprocess
@@ -10,7 +10,7 @@ from src.toolbox_manager import get_all_toolboxes, get_installed_toolboxes, dete
 from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir, is_quant_downloaded, get_active_platform, save_active_platform
 from src.server_runner import build_server_cmd
 from src.config import load_models, get_platforms, get_platform, get_platform_registry
-from src.widgets import ConfirmModal, SelectModal
+from src.widgets import ConfirmModal, SelectModal, SearchableSelect
 import pyfiglet
 
 import importlib.metadata
@@ -101,7 +101,7 @@ class LlamaCockpitApp(App):
         content-align: left middle;
     }
 
-    .inline-row Select {
+    .inline-row SearchableSelect {
         width: 1fr;
     }
 
@@ -321,17 +321,17 @@ class LlamaCockpitApp(App):
                     Static("Launch a Llama.cpp inference server directly without entering an interactive environment.", classes="box"),
                     Horizontal(
                         Label("Engine", classes="inline-label"),
-                        Select([], id="sel_engine", prompt="Select Container Engine"),
+                        SearchableSelect(prompt="Select Container Engine", id="sel_engine"),
                         classes="inline-row"
                     ),
                     Horizontal(
                         Label("Image", classes="inline-label"),
-                        Select([], id="sel_image", prompt="Select Toolbox Image"),
+                        SearchableSelect(prompt="Select Toolbox Image", id="sel_image"),
                         classes="inline-row"
                     ),
                     Horizontal(
                         Label("Model", classes="inline-label"),
-                        Select([], id="sel_model", prompt="Select Local Model"),
+                        SearchableSelect(prompt="Select Local Model", id="sel_model"),
                         classes="inline-row"
                     ),
                     Horizontal(
@@ -365,7 +365,7 @@ class LlamaCockpitApp(App):
                         id="models_dir_row"
                     ),
                     Horizontal(
-                        Select([], id="sel_download_model", prompt="Download Curated Model"),
+                        SearchableSelect(prompt="Download Curated Model", id="sel_download_model"),
                         Button("Download", id="btn_download", variant="success"),
                         Button("Scan Local", id="btn_scan_models"),
                         id="btn_row"
@@ -401,13 +401,13 @@ class LlamaCockpitApp(App):
         self.refresh_models()
         
         engines = detect_engines()
-        sel_engine = self.query_one("#sel_engine", Select)
+        sel_engine = self.query_one("#sel_engine", SearchableSelect)
         sel_engine.set_options([(e, e) for e in engines])
         if engines:
             sel_engine.value = engines[0]
 
         curated = load_models()
-        sel_dl = self.query_one("#sel_download_model", Select)
+        sel_dl = self.query_one("#sel_download_model", SearchableSelect)
         sel_dl.set_options([(m["name"], m["repo"]) for m in curated])
 
     def _update_platform_label(self):
@@ -539,24 +539,24 @@ class LlamaCockpitApp(App):
 
 
     def refresh_server_images(self):
-        sel_engine = self.query_one("#sel_engine", Select)
+        sel_engine = self.query_one("#sel_engine", SearchableSelect)
         engine = sel_engine.value
-        if not isinstance(engine, str): return
+        if not isinstance(engine, str) or not engine: return
         
         registry = get_platform_registry(self.active_platform_id)
         installed = get_installed_toolboxes(registry, engine)
-        sel_image = self.query_one("#sel_image", Select)
+        sel_image = self.query_one("#sel_image", SearchableSelect)
         images = sorted(set([tb['image'] for tb in installed]))
         sel_image.set_options([(img, img) for img in images])
         if images:
             sel_image.value = images[0]
 
-    @on(Select.Changed, "#sel_engine")
-    def on_engine_selected(self, event: Select.Changed):
+    @on(SearchableSelect.Changed, "#sel_engine")
+    def on_engine_selected(self, event: SearchableSelect.Changed):
         self.refresh_server_images()
 
-    @on(Select.Changed, "#sel_model")
-    def on_model_selected(self, event: Select.Changed):
+    @on(SearchableSelect.Changed, "#sel_model")
+    def on_model_selected(self, event: SearchableSelect.Changed):
         """When a model is selected, append any custom_params from models.json to extra args."""
         curated = load_models()
         custom_args_input = self.query_one("#inp_custom_args", Input)
@@ -579,7 +579,7 @@ class LlamaCockpitApp(App):
         dt.clear(columns=True)
         dt.add_columns("Filename")
         
-        sel_model = self.query_one("#sel_model", Select)
+        sel_model = self.query_one("#sel_model", SearchableSelect)
         model_opts = []
         
         for m in models:
@@ -742,9 +742,9 @@ class LlamaCockpitApp(App):
     # ── Server Handler ────────────────────────────────────────────
 
     def _handle_start_server(self):
-        engine = self.query_one("#sel_engine", Select).value
-        image = self.query_one("#sel_image", Select).value
-        model_path = self.query_one("#sel_model", Select).value
+        engine = self.query_one("#sel_engine", SearchableSelect).value
+        image = self.query_one("#sel_image", SearchableSelect).value
+        model_path = self.query_one("#sel_model", SearchableSelect).value
         ctx = self.query_one("#inp_ctx", Input).value
         ngl = self.query_one("#inp_ngl", Input).value
         host = self.query_one("#inp_host", Input).value
@@ -797,7 +797,7 @@ class LlamaCockpitApp(App):
             self.notify("Failed to save models directory config.", severity="error")
 
     def _handle_download(self):
-        repo = self.query_one("#sel_download_model", Select).value
+        repo = self.query_one("#sel_download_model", SearchableSelect).value
         if not isinstance(repo, str) or not repo:
             return
         with self.suspend():
