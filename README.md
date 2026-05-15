@@ -9,8 +9,8 @@ A modern Terminal User Interface (TUI) for managing Llama.cpp toolbox containers
 
 | Platform | GPU Architecture | Resources |
 | :--- | :--- | :--- |
-| **AMD Strix Halo** | Ryzen AI Max (gfx1151) — 128 GB unified memory | [Website](https://strix-halo-toolboxes.com) · [GitHub](https://github.com/kyuz0/amd-strix-halo-toolboxes) · [Docker Hub](https://hub.docker.com/r/kyuz0/amd-strix-halo-toolboxes) |
-| **AMD Radeon R9700** | Radeon AI PRO R9700 (gfx1201) — discrete GPU | [GitHub](https://github.com/kyuz0/amd-r9700-ai-toolboxes) · [Docker Hub](https://hub.docker.com/r/kyuz0/amd-r9700-toolboxes) |
+| **AMD Strix Halo** | Ryzen AI Max (gfx1151) | [Website](https://strix-halo-toolboxes.com) · [GitHub](https://github.com/kyuz0/amd-strix-halo-toolboxes) · [Docker Hub](https://hub.docker.com/r/kyuz0/amd-strix-halo-toolboxes) |
+| **AMD Radeon R9700** | Radeon AI PRO R9700 (gfx1201) | [GitHub](https://github.com/kyuz0/amd-r9700-ai-toolboxes) · [Docker Hub](https://hub.docker.com/r/kyuz0/amd-r9700-toolboxes) |
 
 Each platform ships its own set of pre-built containers (ROCm + Vulkan backends). The cockpit lets you switch between platforms on the fly — the active choice is persisted across sessions.
 
