@@ -176,6 +176,8 @@ def get_hf_quants(repo: str) -> list[str]:
                     quants.add(f)
     return sorted(list(quants))
 
+import sys
+
 def get_download_cmd(repo: str, quant_pattern: str) -> list[str]:
     # Determine the pattern
     if quant_pattern.endswith(".gguf"):
@@ -185,8 +187,13 @@ def get_download_cmd(repo: str, quant_pattern: str) -> list[str]:
         
     final_dir = str(get_models_dir() / repo.split('/')[-1])
     
+    # Use the hf executable from the current Python environment
+    hf_bin = os.path.join(os.path.dirname(sys.executable), "hf")
+    if not os.path.exists(hf_bin):
+        hf_bin = "hf" # Fallback to PATH if not found
+    
     cmd = [
-        "hf", "download",
+        hf_bin, "download",
         repo,
         download_pattern,
         "--local-dir", final_dir
