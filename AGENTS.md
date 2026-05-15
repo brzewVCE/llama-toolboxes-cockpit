@@ -29,5 +29,5 @@
 
 ## Development & Testing Workflow
 *   **Remote Testing Only**: The user tests the application on a dedicated remote server accessed via SSH. The local development environment where the AI agent runs lacks the necessary runtime dependencies (e.g., `huggingface-cli`, Podman/Docker engines with ROCm).
-*   **No Local Execution**: DO NOT attempt to enter toolboxes, or start servers locally to test your code. 
+*   **No Local Execution**: DO NOT attempt to run subprocess commands, enter toolboxes, or start servers locally to test your code. 
 *   **Ask the User**: Instead of executing potentially failing environment-dependent commands with `run_command`, clearly state what needs to be tested and ask the user to run it on their test server.

@@ -14,12 +14,18 @@
               "tag": "rocm-7.2.3",
               "description": "Stable ROCm 7.2.3 backend (recommended)",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -27,12 +33,18 @@
               "tag": "rocm-6.4.4",
               "description": "Stable ROCm 6.4.4 backend",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -40,9 +52,12 @@
               "tag": "vulkan-radv",
               "description": "Mesa RADV Vulkan backend",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--group-add", "video",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -50,9 +65,12 @@
               "tag": "vulkan-amdvlk",
               "description": "AMDVLK Vulkan backend",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--group-add", "video",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             }
           ]
@@ -65,12 +83,18 @@
               "tag": "rocm-7.2.2-pr21344",
               "description": "ROCm PR 21344 builds (Experimental)",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -78,12 +102,18 @@
               "tag": "rocm-7.2.3-mtp",
               "description": "ROCm 7.2.3 with Multi-Token Prediction (Experimental)",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -91,9 +121,12 @@
               "tag": "vulkan-radv-mtp",
               "description": "Mesa RADV Vulkan with Multi-Token Prediction (Experimental)",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--group-add", "video",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -101,12 +134,18 @@
               "tag": "rocm7-nightlies",
               "description": "TheROCk nightly builds — bleeding edge, may contain bugs",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             }
           ]
@@ -123,16 +162,22 @@
           "name": "Official Toolboxes",
           "toolboxes": [
             {
-              "name": "r9700-llama-rocm-7.2.2",
-              "tag": "rocm-7.2.2",
-              "description": "Stable ROCm 7.2.2 backend",
+              "name": "r9700-llama-rocm-7.2.3",
+              "tag": "rocm-7.2.3",
+              "description": "Stable ROCm 7.2.3 backend",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -140,12 +185,18 @@
               "tag": "rocm-6.4.4",
               "description": "Stable ROCm 6.4.4 backend (Fedora 43)",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -153,9 +204,12 @@
               "tag": "vulkan-radv",
               "description": "Mesa RADV Vulkan backend (recommended for stability)",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--group-add", "video",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             },
             {
@@ -163,9 +217,12 @@
               "tag": "vulkan-amdvlk",
               "description": "AMDVLK Vulkan backend (≤2 GiB single buffer limit)",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--group-add", "video",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             }
           ]
@@ -178,12 +235,50 @@
               "tag": "rocm7-nightlies",
               "description": "TheROCk nightly builds — bleeding edge, may contain bugs",
               "engine_args": [
-                "--device", "/dev/dri",
-                "--device", "/dev/kfd",
-                "--group-add", "video",
-                "--group-add", "render",
-                "--group-add", "sudo",
-                "--security-opt", "seccomp=unconfined"
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
+              ]
+            },
+            {
+              "name": "r9700-llama-rocm-7.2.3-mtp",
+              "tag": "rocm-7.2.3-mtp",
+              "description": "ROCm 7.2.3 with Multi-Token Prediction (Experimental)",
+              "engine_args": [
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
+              ]
+            },
+            {
+              "name": "r9700-llama-vulkan-radv-mtp",
+              "tag": "vulkan-radv-mtp",
+              "description": "Mesa RADV Vulkan with Multi-Token Prediction (Experimental)",
+              "engine_args": [
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--security-opt",
+                "seccomp=unconfined"
               ]
             }
           ]
