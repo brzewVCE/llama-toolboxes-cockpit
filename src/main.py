@@ -13,9 +13,17 @@ from src.config import load_models, get_platforms, get_platform, get_platform_re
 from src.widgets import ConfirmModal, SelectModal
 import pyfiglet
 
+import importlib.metadata
+
 def generate_banner() -> str:
     ascii_art = pyfiglet.figlet_format("Llama.cpp Cockpit", font="small")
-    return f"[green]{ascii_art}[/green]"
+    try:
+        version = importlib.metadata.version("llama-cockpit")
+        version_str = f"v{version}"
+    except Exception:
+        version_str = "v?.?.?"
+        
+    return f"[green]{ascii_art}[/green][dim]{version_str}[/dim]"
 
 class LlamaCockpitApp(App):
     TITLE = "Llama.cpp Cockpit"
