@@ -335,7 +335,7 @@ class LlamaCockpitApp(App):
                         classes="inline-row"
                     ),
                     Horizontal(
-                        Horizontal(Label("Context", classes="inline-label"), Input(placeholder="12288", id="inp_ctx", value="12288"), classes="short-field"),
+                        Horizontal(Label("Context", classes="inline-label"), Input(placeholder="126976", id="inp_ctx", value="126976"), classes="short-field"),
                         Horizontal(Label("NGL", classes="inline-label"), Input(placeholder="999", id="inp_ngl", value="999"), classes="short-field"),
                         Horizontal(Label("Host", classes="inline-label"), Input(placeholder="localhost", id="inp_host", value="localhost"), classes="short-field"),
                         Horizontal(Label("Port", classes="inline-label"), Input(placeholder="8080", id="inp_port", value="8080"), classes="short-field"),
