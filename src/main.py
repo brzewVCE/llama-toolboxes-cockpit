@@ -399,6 +399,7 @@ class LlamaCockpitApp(App):
         self.selected_toolboxes = set()
         self.refresh_toolboxes()
         self.refresh_models()
+        self.check_app_updates()
         
         engines = detect_engines()
         sel_engine = self.query_one("#sel_engine", SearchableSelect)
@@ -409,6 +410,30 @@ class LlamaCockpitApp(App):
         curated = load_models()
         sel_dl = self.query_one("#sel_download_model", SearchableSelect)
         sel_dl.set_options([(m["name"], m["repo"]) for m in curated])
+
+    @work(thread=True)
+    def check_app_updates(self):
+        import urllib.request
+        import json
+        import importlib.metadata
+        try:
+            current_version = importlib.metadata.version("llama-cockpit")
+            req = urllib.request.Request("https://api.github.com/repos/kyuz0/llama-toolboxes-cockpit/tags")
+            req.add_header('User-Agent', 'Llama-Cockpit-Update-Checker')
+            with urllib.request.urlopen(req, timeout=3) as response:
+                data = json.loads(response.read().decode())
+                if data:
+                    latest_tag = data[0]['name']
+                    latest_version = latest_tag.lstrip('v')
+                    
+                    curr_parts = tuple(int(x) for x in current_version.split('.') if x.isdigit())
+                    latest_parts = tuple(int(x) for x in latest_version.split('.') if x.isdigit())
+                    
+                    if latest_parts > curr_parts:
+                        msg = f"Update available: v{latest_version} (Current: v{current_version}).\nRun `pipx upgrade llama-cockpit` to update."
+                        self.app.call_from_thread(self.notify, msg, title="Cockpit Update Available", severity="information", timeout=15)
+        except Exception:
+            pass
 
     def _update_platform_label(self):
         platform = get_platform(self.active_platform_id)
