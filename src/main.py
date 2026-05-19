@@ -444,21 +444,28 @@ class LlamaCockpitApp(App):
         else:
             self.query_one("#platform_label", Label).update(f"Platform: {self.active_platform_id}")
 
+    def _toggle_row_selection(self, dt: DataTable, cursor_row: int):
+        try:
+            name = dt.get_cell_at((cursor_row, 1))
+            if name in self.selected_toolboxes:
+                self.selected_toolboxes.remove(name)
+                dt.update_cell_at((cursor_row, 0), "\\[ ]")
+            else:
+                self.selected_toolboxes.add(name)
+                dt.update_cell_at((cursor_row, 0), "\\[x]")
+        except Exception:
+            pass
+
+    @on(events.MouseUp)
+    def on_mouse_up(self, event: events.MouseUp):
+        if isinstance(event.control, DataTable) and event.control.id and event.control.id.startswith("dt_"):
+            import time
+            self._last_dt_click_time = time.time()
+
     @on(DataTable.RowSelected)
     def on_row_selected(self, event: DataTable.RowSelected):
         if event.control.id and event.control.id.startswith("dt_"):
-            try:
-                name = event.control.get_cell_at((event.cursor_row, 1))
-                if name in self.selected_toolboxes:
-                    self.selected_toolboxes.remove(name)
-                    event.control.update_cell_at((event.cursor_row, 0), "\\[ ]")
-                else:
-                    self.selected_toolboxes.add(name)
-                    event.control.update_cell_at((event.cursor_row, 0), "\\[x]")
-                
-
-            except Exception:
-                pass
+            self._toggle_row_selection(event.control, event.cursor_row)
 
     @on(DataTable.RowHighlighted)
     def on_row_highlighted(self, event: DataTable.RowHighlighted):
@@ -466,6 +473,10 @@ class LlamaCockpitApp(App):
             return
             
         if event.control.id and event.control.id.startswith("dt_"):
+            import time
+            if time.time() - getattr(self, "_last_dt_click_time", 0.0) < 0.1:
+                self._toggle_row_selection(event.control, event.cursor_row)
+                
             try:
                 name = event.control.get_cell_at((event.cursor_row, 1))
                 self.active_toolbox_name = name
