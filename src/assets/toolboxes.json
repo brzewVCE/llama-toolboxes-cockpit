@@ -220,6 +220,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": "intel-b70",
+      "name": "Intel Arc B70",
+      "description": "Intel Xe-HPG / Battlemage (32GB)",
+      "registry": "docker.io/kyuz0/intel-b70-ai-toolboxes",
+      "groups": [
+        {
+          "name": "Official Toolboxes",
+          "toolboxes": [
+            {
+              "name": "b70-llama-sycl",
+              "tag": "sycl",
+              "description": "oneAPI SYCL backend (recommended)",
+              "engine_args": [
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--security-opt",
+                "seccomp=unconfined"
+              ]
+            },
+            {
+              "name": "b70-llama-vulkan",
+              "tag": "vulkan",
+              "description": "Vulkan backend",
+              "engine_args": [
+                "--device",
+                "/dev/dri",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--security-opt",
+                "seccomp=unconfined"
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }
