@@ -347,7 +347,7 @@ class LlamaCockpitApp(App):
                         classes="options-row"
                     ),
                     Horizontal(
-                        Label("HIP Devices", classes="inline-label"),
+                        Label("HIP Devices", classes="inline-label", id="lbl_gpu_devices"),
                         Input(placeholder="e.g. 0 (leave empty to unset)", id="inp_hip_devices", value=""),
                         classes="inline-row"
                     ),
@@ -448,6 +448,18 @@ class LlamaCockpitApp(App):
             self.query_one("#platform_label", Label).update(f"Platform: {name}  —  {desc}")
         else:
             self.query_one("#platform_label", Label).update(f"Platform: {self.active_platform_id}")
+
+        try:
+            lbl_gpu = self.query_one("#lbl_gpu_devices", Label)
+            inp_gpu = self.query_one("#inp_hip_devices", Input)
+            if "intel" in self.active_platform_id.lower():
+                lbl_gpu.update("Level Zero Devices")
+                inp_gpu.placeholder = "e.g. 0.0 (leave empty to unset)"
+            else:
+                lbl_gpu.update("HIP Devices")
+                inp_gpu.placeholder = "e.g. 0 (leave empty to unset)"
+        except Exception:
+            pass
 
     def _toggle_row_selection(self, dt: DataTable, cursor_row: int):
         try:
@@ -798,7 +810,21 @@ class LlamaCockpitApp(App):
 
         if engine and image and model_path and ctx.isdigit():
             ngl_val = int(ngl) if ngl.isdigit() else 999
-            cmd = build_server_cmd(engine, image, model_path, int(ctx), use_fa, use_no_mmap, custom_args, host, port, ngl_val, hip_devices=hip_devices)
+            
+            engine_args = None
+            if hasattr(self, "toolboxes_dict"):
+                for tb in self.toolboxes_dict.values():
+                    if tb.get("image") == image:
+                        engine_args = tb.get("args")
+                        break
+
+            cmd = build_server_cmd(
+                engine, image, model_path, int(ctx), use_fa, use_no_mmap, 
+                custom_args, host, port, ngl_val, 
+                hip_devices=hip_devices, 
+                platform_id=self.active_platform_id, 
+                engine_args=engine_args
+            )
             with self.suspend():
                 print(f"\nStarting server with command:\n{' '.join(cmd)}\n")
                 print("Press Ctrl+C to stop the server and return to the UI.\n")

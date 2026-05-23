@@ -3,20 +3,37 @@ from .model_manager import resolve_model_path
 
 import shlex
 
-def build_server_cmd(engine: str, image: str, model_path: str, context_size: int, use_fa: bool, use_no_mmap: bool, custom_args: str, host: str = "localhost", port: str = "8080", ngl: int = 999, hip_devices: str = "") -> list[str]:
+def build_server_cmd(engine: str, image: str, model_path: str, context_size: int, use_fa: bool, use_no_mmap: bool, custom_args: str, host: str = "localhost", port: str = "8080", ngl: int = 999, hip_devices: str = "", platform_id: str = "", engine_args: list[str] = None) -> list[str]:
     models_dir = os.path.expanduser("~/models")
     
+    if engine_args is None:
+        # fallback based on image/platform_id
+        if "intel" in image.lower() or "intel" in platform_id.lower():
+            engine_args = [
+                "--device", "/dev/dri",
+                "--group-add", "video",
+                "--group-add", "render",
+                "--security-opt", "seccomp=unconfined"
+            ]
+        else:
+            engine_args = [
+                "--device", "/dev/dri",
+                "--device", "/dev/kfd",
+                "--group-add", "video",
+                "--group-add", "render",
+                "--security-opt", "seccomp=unconfined"
+            ]
+
     cmd = [
-        engine, "run", "--rm", "-it",
-        "--device", "/dev/dri",
-        "--device", "/dev/kfd",
-        "--group-add", "video",
-        "--group-add", "render",
-        "--security-opt", "seccomp=unconfined"
+        engine, "run", "--rm", "-it"
     ]
+    cmd.extend(engine_args)
     
     if hip_devices:
-        cmd.extend(["-e", f"HIP_VISIBLE_DEVICES={hip_devices}"])
+        if "intel" in image.lower() or "intel" in platform_id.lower():
+            cmd.extend(["-e", f"ZE_AFFINITY_MASK={hip_devices}"])
+        else:
+            cmd.extend(["-e", f"HIP_VISIBLE_DEVICES={hip_devices}"])
         
     # Podman requires these flags to read host volumes without permission issues (SELinux / UID mapping)
     if engine == "podman":
