@@ -158,12 +158,21 @@ class SearchableSelect(Widget):
     SearchableSelect {
         height: 1;
         width: 1fr;
+        background: #262626;
     }
     SearchableSelect > Input {
         border: none;
         height: 1;
         width: 1fr;
         background: transparent;
+        padding: 0 1;
+    }
+    SearchableSelect:focus-within {
+        background: #303030;
+    }
+    SearchableSelect > Input:focus {
+        color: #e57373;
+        text-style: bold;
     }
     """
 

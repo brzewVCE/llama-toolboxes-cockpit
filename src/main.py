@@ -240,8 +240,43 @@ class LlamaCockpitApp(App):
     }
     
     #local_model_list {
-        border: solid #d32f2f;
+        border: none;
         height: 1fr;
+    }
+    
+    #model_manager_view {
+        height: 1fr;
+        padding: 0;
+    }
+    
+    .model-zone {
+        background: #1e1e1e;
+        border: round #333333;
+        padding: 0 1;
+        margin-bottom: 1;
+        height: auto;
+    }
+    
+    .model-zone:focus-within {
+        border: round #d32f2f;
+    }
+    
+    #download_zone {
+        height: auto;
+    }
+    
+    #local_zone {
+        height: 1fr;
+    }
+    
+    .zone-title {
+        color: #e57373;
+        text-style: bold;
+        background: transparent;
+        width: 100%;
+        margin-bottom: 0;
+        margin-top: 0;
+        height: auto;
     }
     
     Input, Checkbox {
@@ -362,22 +397,25 @@ class LlamaCockpitApp(App):
                     )
                 )
             with TabPane("Model Manager", id="tab-models"):
-                yield Vertical(
-                    Static("Download and manage GGUF models for inference.\nModels will be downloaded to and scanned from the directory configured below.", classes="box"),
-                    Horizontal(
-                        Input(placeholder="~/models", id="inp_models_dir", value=str(get_models_dir())),
-                        Button("Save Path", id="btn_save_models_path"),
-                        id="models_dir_row"
-                    ),
-                    Horizontal(
-                        SearchableSelect(prompt="Download Curated Model", id="sel_download_model"),
-                        Button("Download", id="btn_download", variant="success"),
-                        Button("Scan Local", id="btn_scan_models"),
-                        id="btn_row"
-                    ),
-                    Label("Local GGUF Models", classes="inline-label"),
-                    DataTable(id="local_model_list", cursor_type="row"),
-                )
+                with Vertical(id="model_manager_view"):
+                    # Zone 1: Hugging Face Downloader
+                    with Vertical(id="download_zone", classes="model-zone"):
+                        yield Label("📥 Curated HF Downloader", classes="zone-title")
+                        with Horizontal(classes="inline-row"):
+                            yield Label("Model Repo", classes="inline-label")
+                            yield SearchableSelect(prompt="Search curated models (e.g. Qwen, Gemma)...", id="sel_download_model")
+                            yield Button("Download", id="btn_download", variant="success")
+                    
+                    # Zone 2: Local Models Library
+                    with Vertical(id="local_zone", classes="model-zone"):
+                        yield Label("📂 Local GGUF Directory", classes="zone-title")
+                        with Horizontal(classes="inline-row"):
+                            yield Label("Storage Path", classes="inline-label")
+                            yield Input(placeholder="e.g. ~/models", id="inp_models_dir", value=str(get_models_dir()))
+                            yield Button("Save Path", id="btn_save_models_path")
+                            yield Button("Scan Local", id="btn_scan_models", variant="primary")
+                        
+                        yield DataTable(id="local_model_list", cursor_type="row")
         yield Footer()
 
     def on_mount(self):
