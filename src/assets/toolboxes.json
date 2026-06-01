@@ -115,6 +115,25 @@
                 "--security-opt",
                 "seccomp=unconfined"
               ]
+            },
+            {
+              "name": "llama-rocm-7.2.4-turboquant",
+              "tag": "rocm-7.2.4-turboquant",
+              "description": "Experimental Turbo Quant build (ROCm 7.2.4)",
+              "engine_args": [
+                "--device",
+                "/dev/dri",
+                "--device",
+                "/dev/kfd",
+                "--group-add",
+                "video",
+                "--group-add",
+                "render",
+                "--group-add",
+                "sudo",
+                "--security-opt",
+                "seccomp=unconfined"
+              ]
             }
           ]
         }
