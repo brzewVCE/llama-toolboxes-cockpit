@@ -9,7 +9,7 @@ import subprocess
 from src.toolbox_manager import get_all_toolboxes, get_installed_toolboxes, detect_engines, get_os_toolbox_cmd, get_remote_image_date, create_toolbox, delete_toolbox
 from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir, is_quant_downloaded, get_active_platform, save_active_platform
 from src.server_runner import build_server_cmd
-from src.config import load_models, get_platforms, get_platform, get_platform_registry
+from src.config import load_models, get_platforms, get_platform, get_platform_registry, get_model_config, get_inference_profiles, get_mtp_config
 from src.widgets import ConfirmModal, SelectModal, SearchableSelect
 import pyfiglet
 
@@ -327,6 +327,27 @@ class LlamaCockpitApp(App):
         min-height: 10;
         margin-bottom: 1;
     }
+    
+    #mtp_zone, #profile_zone {
+        display: none;
+    }
+    
+    #lbl_profile_desc {
+        color: #999999;
+        text-style: italic;
+        height: auto;
+        margin-left: 1;
+        width: 1fr;
+    }
+    
+    .mtp-params-row {
+        height: auto;
+        max-height: 3;
+    }
+    
+    .mtp-params-row .short-field {
+        margin-right: 2;
+    }
     """
 
     def compose(self) -> ComposeResult:
@@ -385,6 +406,29 @@ class LlamaCockpitApp(App):
                         Label("HIP Devices", classes="inline-label", id="lbl_gpu_devices"),
                         Input(placeholder="e.g. 0 (leave empty to unset)", id="inp_hip_devices", value=""),
                         classes="inline-row"
+                    ),
+                    Vertical(
+                        Label("🧪 MTP (Multi-Token Prediction)", classes="zone-title"),
+                        Horizontal(
+                            Checkbox("Enable MTP Speculative Decoding", id="chk_mtp_enable", value=True),
+                            classes="options-row"
+                        ),
+                        Horizontal(
+                            Horizontal(Label("Draft Tokens", classes="inline-label"), Input(placeholder="2", id="inp_mtp_draft_n", value="2"), classes="short-field"),
+                            Horizontal(Label("Parallel Seq", classes="inline-label"), Input(placeholder="1", id="inp_mtp_np", value="1"), classes="short-field"),
+                            classes="mtp-params-row"
+                        ),
+                        id="mtp_zone", classes="model-zone"
+                    ),
+                    Vertical(
+                        Label("🎛️ Inference Profile", classes="zone-title"),
+                        Horizontal(
+                            Label("Profile", classes="inline-label"),
+                            SearchableSelect(prompt="Select inference profile...", id="sel_inference_profile"),
+                            Label("", id="lbl_profile_desc"),
+                            classes="inline-row"
+                        ),
+                        id="profile_zone", classes="model-zone"
                     ),
                     Horizontal(
                         Label("Extra Args", classes="inline-label"),
@@ -658,20 +702,198 @@ class LlamaCockpitApp(App):
 
     @on(SearchableSelect.Changed, "#sel_model")
     def on_model_selected(self, event: SearchableSelect.Changed):
-        """When a model is selected, append any custom_params from models.json to extra args."""
-        curated = load_models()
-        custom_args_input = self.query_one("#inp_custom_args", Input)
-        # Start with base default
+        """When a model is selected, configure MTP zone, inference profile zone, and extra args."""
+        selected_path = str(event.value) if event.value else ""
+        model_config = get_model_config(selected_path)
+        
+        # Store current model config for use by other handlers
+        self._current_model_config = model_config
+        self._suppress_custom_args_change = True
+        
+        mtp_zone = self.query_one("#mtp_zone", Vertical)
+        profile_zone = self.query_one("#profile_zone", Vertical)
+        
+        # ── MTP Zone ────────────────────────────────────────────────────
+        mtp_config = get_mtp_config(model_config)
+        if mtp_config:
+            mtp_zone.styles.display = "block"
+            chk = self.query_one("#chk_mtp_enable", Checkbox)
+            chk.value = True
+            self.query_one("#inp_mtp_draft_n", Input).value = str(mtp_config.get("default_draft_n", 2))
+            self.query_one("#inp_mtp_np", Input).value = str(mtp_config.get("default_np", 1))
+        else:
+            mtp_zone.styles.display = "none"
+        
+        # ── Inference Profile Zone ──────────────────────────────────────
+        profiles = get_inference_profiles(model_config)
+        if profiles:
+            profile_zone.styles.display = "block"
+            sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
+            profile_names = list(profiles.keys())
+            options = [(name, name) for name in profile_names] + [("Custom", "Custom")]
+            sel_profile.set_options(options)
+            # Auto-select first profile
+            sel_profile.value = profile_names[0]
+            desc = profiles[profile_names[0]].get("description", "")
+            self.query_one("#lbl_profile_desc", Label).update(desc)
+        else:
+            profile_zone.styles.display = "none"
+            self.query_one("#sel_inference_profile", SearchableSelect).set_options([])
+            self.query_one("#lbl_profile_desc", Label).update("")
+        
+        # ── Rebuild Extra Args ──────────────────────────────────────────
+        self._rebuild_extra_args()
+        self._suppress_custom_args_change = False
+
+    @on(SearchableSelect.Changed, "#sel_inference_profile")
+    def on_profile_changed(self, event: SearchableSelect.Changed):
+        """When a profile is selected, update description and rebuild extra args."""
+        profile_name = str(event.value) if event.value else ""
+        model_config = getattr(self, "_current_model_config", None)
+        profiles = get_inference_profiles(model_config)
+        
+        if profile_name == "Custom" or not profile_name:
+            self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
+        elif profile_name in profiles:
+            desc = profiles[profile_name].get("description", "")
+            self.query_one("#lbl_profile_desc", Label).update(desc)
+        
+        self._suppress_custom_args_change = True
+        self._rebuild_extra_args()
+        self._suppress_custom_args_change = False
+
+    @on(Checkbox.Changed, "#chk_mtp_enable")
+    def on_mtp_toggled(self, event: Checkbox.Changed):
+        """When MTP is toggled, rebuild extra args."""
+        self._suppress_custom_args_change = True
+        self._rebuild_extra_args()
+        self._suppress_custom_args_change = False
+
+    @on(Input.Changed, "#inp_mtp_draft_n")
+    def on_mtp_draft_changed(self, event: Input.Changed):
+        """When MTP draft tokens change, rebuild extra args."""
+        self._suppress_custom_args_change = True
+        self._rebuild_extra_args()
+        self._suppress_custom_args_change = False
+
+    @on(Input.Changed, "#inp_mtp_np")
+    def on_mtp_np_changed(self, event: Input.Changed):
+        """When MTP parallel sequences change, rebuild extra args."""
+        self._suppress_custom_args_change = True
+        self._rebuild_extra_args()
+        self._suppress_custom_args_change = False
+
+    @on(Input.Changed, "#inp_custom_args")
+    def on_custom_args_changed(self, event: Input.Changed):
+        """When user manually edits Extra Args, switch profile to Custom."""
+        if getattr(self, "_suppress_custom_args_change", False):
+            return
+        # User is manually editing — switch profile dropdown to "Custom"
+        model_config = getattr(self, "_current_model_config", None)
+        profiles = get_inference_profiles(model_config)
+        if profiles:
+            sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
+            if sel_profile.value != "Custom":
+                # Suppress to avoid recursive rebuild
+                self._suppress_custom_args_change = True
+                sel_profile.value = "Custom"
+                self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
+                self._suppress_custom_args_change = False
+
+    def _rebuild_extra_args(self):
+        """Rebuild the Extra Args field from base + profile args + MTP args."""
+        import shlex
+        
         base_args = "--jinja"
-        selected_path = str(event.value).lower() if event.value else ""
-        for m in curated:
-            if m.get("custom_params"):
-                # Match repo basename (e.g. "Qwen3.6-27B-MTP-GGUF") against local file path
-                repo_basename = m["repo"].split("/")[-1].lower()
-                if repo_basename in selected_path:
-                    base_args = f"--jinja {m['custom_params']}"
-                    break
-        custom_args_input.value = base_args
+        
+        # ── Profile args ────────────────────────────────────────────────
+        profile_args = ""
+        model_config = getattr(self, "_current_model_config", None)
+        profiles = get_inference_profiles(model_config)
+        if profiles:
+            sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
+            profile_name = str(sel_profile.value) if sel_profile.value else ""
+            if profile_name and profile_name != "Custom" and profile_name in profiles:
+                profile_args = profiles[profile_name].get("args", "")
+        
+        # ── MTP args ────────────────────────────────────────────────────
+        mtp_args = ""
+        mtp_config = get_mtp_config(model_config)
+        if mtp_config:
+            chk = self.query_one("#chk_mtp_enable", Checkbox)
+            if chk.value:
+                draft_n = self.query_one("#inp_mtp_draft_n", Input).value or "2"
+                np_val = self.query_one("#inp_mtp_np", Input).value or "1"
+                mtp_args = f"--spec-type draft-mtp --spec-draft-n-max {draft_n} -np {np_val}"
+        
+        # ── Merge ────────────────────────────────────────────────────
+        merged = self._merge_args(base_args, profile_args)
+        if mtp_args:
+            merged = self._merge_args(merged, mtp_args)
+        
+        self.query_one("#inp_custom_args", Input).value = merged
+
+    @staticmethod
+    def _merge_args(base: str, override: str) -> str:
+        """Merge two argument strings. Override args replace matching flags in base, new ones are appended."""
+        import shlex
+        
+        if not override:
+            return base
+        if not base:
+            return override
+            
+        base_tokens = shlex.split(base)
+        override_tokens = shlex.split(override)
+        
+        # Parse into ordered list of (flag, value_or_None) pairs
+        def parse_flags(tokens):
+            flags = []
+            i = 0
+            while i < len(tokens):
+                token = tokens[i]
+                if token.startswith("-"):
+                    # Check if next token is a value (not a flag)
+                    if i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
+                        flags.append((token, tokens[i + 1]))
+                        i += 2
+                    else:
+                        flags.append((token, None))
+                        i += 1
+                else:
+                    # Standalone value (shouldn't normally happen but be safe)
+                    flags.append((token, None))
+                    i += 1
+            return flags
+        
+        base_flags = parse_flags(base_tokens)
+        override_flags = parse_flags(override_tokens)
+        
+        # Build result: start with base, override matching, append new
+        override_map = {f: v for f, v in override_flags}
+        override_keys_used = set()
+        
+        result = []
+        for flag, val in base_flags:
+            if flag in override_map:
+                # Replace with override value
+                result.append((flag, override_map[flag]))
+                override_keys_used.add(flag)
+            else:
+                result.append((flag, val))
+        
+        # Append any override flags not already in base
+        for flag, val in override_flags:
+            if flag not in override_keys_used:
+                result.append((flag, val))
+        
+        # Serialize back
+        parts = []
+        for flag, val in result:
+            parts.append(flag)
+            if val is not None:
+                parts.append(val)
+        return " ".join(parts)
 
     def refresh_models(self):
         models = scan_local_models()

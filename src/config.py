@@ -37,3 +37,33 @@ def get_platform_registry(platform_id: str) -> str:
     if platform:
         return platform.get("registry", "")
     return ""
+
+
+def get_model_config(selected_path: str) -> dict | None:
+    """Look up a curated model entry by fuzzy-matching repo basename against a local file path."""
+    if not selected_path:
+        return None
+    curated = load_models()
+    path_lower = selected_path.lower()
+    for m in curated:
+        repo_basename = m["repo"].split("/")[-1].lower()
+        if repo_basename in path_lower:
+            return m
+    return None
+
+
+def get_inference_profiles(model_config: dict) -> dict:
+    """Returns the inference_profiles dict for a model, or empty dict if none."""
+    if not model_config:
+        return {}
+    return model_config.get("inference_profiles", {})
+
+
+def get_mtp_config(model_config: dict) -> dict | None:
+    """Returns the mtp config dict for a model, or None if MTP is not supported."""
+    if not model_config:
+        return None
+    mtp = model_config.get("mtp")
+    if mtp and mtp.get("supported"):
+        return mtp
+    return None
