@@ -200,7 +200,8 @@
   },
   {
     "name": "Llama 2 7B",
-    "repo": "TheBloke/Llama-2-7B-GGUF"
+    "repo": "TheBloke/Llama-2-7B-GGUF",
+    "no_jinja": true
   },
   {
     "name": "MiniMax M2.7",

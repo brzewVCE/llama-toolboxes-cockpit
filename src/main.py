@@ -390,23 +390,6 @@ class LlamaCockpitApp(App):
                         SearchableSelect(prompt="Select Local Model", id="sel_model"),
                         classes="inline-row"
                     ),
-                    Horizontal(
-                        Horizontal(Label("Context", classes="inline-label"), Input(placeholder="126976", id="inp_ctx", value="126976"), classes="short-field"),
-                        Horizontal(Label("NGL", classes="inline-label"), Input(placeholder="999", id="inp_ngl", value="999"), classes="short-field"),
-                        Horizontal(Label("Host", classes="inline-label"), Input(placeholder="localhost", id="inp_host", value="localhost"), classes="short-field"),
-                        Horizontal(Label("Port", classes="inline-label"), Input(placeholder="8080", id="inp_port", value="8080"), classes="short-field"),
-                        classes="inline-row"
-                    ),
-                    Horizontal(
-                        Checkbox("Flash Attention (-fa 1)", id="chk_fa", value=True),
-                        Checkbox("No Memory Mapping (--no-mmap)", id="chk_no_mmap", value=True),
-                        classes="options-row"
-                    ),
-                    Horizontal(
-                        Label("HIP Devices", classes="inline-label", id="lbl_gpu_devices"),
-                        Input(placeholder="e.g. 0 (leave empty to unset)", id="inp_hip_devices", value=""),
-                        classes="inline-row"
-                    ),
                     Vertical(
                         Label("🧪 MTP (Multi-Token Prediction)", classes="zone-title"),
                         Horizontal(
@@ -429,6 +412,23 @@ class LlamaCockpitApp(App):
                             classes="inline-row"
                         ),
                         id="profile_zone", classes="model-zone"
+                    ),
+                    Horizontal(
+                        Horizontal(Label("Context", classes="inline-label"), Input(placeholder="126976", id="inp_ctx", value="126976"), classes="short-field"),
+                        Horizontal(Label("NGL", classes="inline-label"), Input(placeholder="999", id="inp_ngl", value="999"), classes="short-field"),
+                        Horizontal(Label("Host", classes="inline-label"), Input(placeholder="localhost", id="inp_host", value="localhost"), classes="short-field"),
+                        Horizontal(Label("Port", classes="inline-label"), Input(placeholder="8080", id="inp_port", value="8080"), classes="short-field"),
+                        classes="inline-row"
+                    ),
+                    Horizontal(
+                        Checkbox("Flash Attention (-fa 1)", id="chk_fa", value=True),
+                        Checkbox("No Memory Mapping (--no-mmap)", id="chk_no_mmap", value=True),
+                        classes="options-row"
+                    ),
+                    Horizontal(
+                        Label("HIP Devices", classes="inline-label", id="lbl_gpu_devices"),
+                        Input(placeholder="e.g. 0 (leave empty to unset)", id="inp_hip_devices", value=""),
+                        classes="inline-row"
                     ),
                     Horizontal(
                         Label("Extra Args", classes="inline-label"),
@@ -708,7 +708,12 @@ class LlamaCockpitApp(App):
         
         # Store current model config for use by other handlers
         self._current_model_config = model_config
-        self._suppress_custom_args_change = True
+        
+        # Reset Extra Args to base immediately so all change handlers start with a clean state
+        inp = self.query_one("#inp_custom_args", Input)
+        base_arg = "--no-jinja" if (model_config and model_config.get("no_jinja")) else "--jinja"
+        self._expected_custom_args = base_arg
+        inp.value = base_arg
         
         mtp_zone = self.query_one("#mtp_zone", Vertical)
         profile_zone = self.query_one("#profile_zone", Vertical)
@@ -741,9 +746,7 @@ class LlamaCockpitApp(App):
             self.query_one("#sel_inference_profile", SearchableSelect).set_options([])
             self.query_one("#lbl_profile_desc", Label).update("")
         
-        # ── Rebuild Extra Args ──────────────────────────────────────────
         self._rebuild_extra_args()
-        self._suppress_custom_args_change = False
 
     @on(SearchableSelect.Changed, "#sel_inference_profile")
     def on_profile_changed(self, event: SearchableSelect.Changed):
@@ -754,61 +757,53 @@ class LlamaCockpitApp(App):
         
         if profile_name == "Custom" or not profile_name:
             self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
+            return
         elif profile_name in profiles:
             desc = profiles[profile_name].get("description", "")
             self.query_one("#lbl_profile_desc", Label).update(desc)
         
-        self._suppress_custom_args_change = True
         self._rebuild_extra_args()
-        self._suppress_custom_args_change = False
 
     @on(Checkbox.Changed, "#chk_mtp_enable")
     def on_mtp_toggled(self, event: Checkbox.Changed):
         """When MTP is toggled, rebuild extra args."""
-        self._suppress_custom_args_change = True
         self._rebuild_extra_args()
-        self._suppress_custom_args_change = False
 
     @on(Input.Changed, "#inp_mtp_draft_n")
     def on_mtp_draft_changed(self, event: Input.Changed):
         """When MTP draft tokens change, rebuild extra args."""
-        self._suppress_custom_args_change = True
         self._rebuild_extra_args()
-        self._suppress_custom_args_change = False
 
     @on(Input.Changed, "#inp_mtp_np")
     def on_mtp_np_changed(self, event: Input.Changed):
         """When MTP parallel sequences change, rebuild extra args."""
-        self._suppress_custom_args_change = True
         self._rebuild_extra_args()
-        self._suppress_custom_args_change = False
 
     @on(Input.Changed, "#inp_custom_args")
     def on_custom_args_changed(self, event: Input.Changed):
         """When user manually edits Extra Args, switch profile to Custom."""
-        if getattr(self, "_suppress_custom_args_change", False):
+        if getattr(self, "_expected_custom_args", None) == event.value:
             return
+        
         # User is manually editing — switch profile dropdown to "Custom"
         model_config = getattr(self, "_current_model_config", None)
         profiles = get_inference_profiles(model_config)
         if profiles:
             sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
             if sel_profile.value != "Custom":
-                # Suppress to avoid recursive rebuild
-                self._suppress_custom_args_change = True
                 sel_profile.value = "Custom"
                 self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
-                self._suppress_custom_args_change = False
 
     def _rebuild_extra_args(self):
-        """Rebuild the Extra Args field from base + profile args + MTP args."""
-        import shlex
-        
-        base_args = "--jinja"
+        """Rebuild the Extra Args field from current + profile args + MTP args."""
+        inp = self.query_one("#inp_custom_args", Input)
+        model_config = getattr(self, "_current_model_config", None)
+        base_arg = "--no-jinja" if (model_config and model_config.get("no_jinja")) else "--jinja"
+        opposite_arg = "--no-jinja" if base_arg == "--jinja" else "--jinja"
+        current_val = inp.value or base_arg
         
         # ── Profile args ────────────────────────────────────────────────
         profile_args = ""
-        model_config = getattr(self, "_current_model_config", None)
         profiles = get_inference_profiles(model_config)
         if profiles:
             sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
@@ -817,21 +812,63 @@ class LlamaCockpitApp(App):
                 profile_args = profiles[profile_name].get("args", "")
         
         # ── MTP args ────────────────────────────────────────────────────
+        mtp_enabled = False
         mtp_args = ""
         mtp_config = get_mtp_config(model_config)
         if mtp_config:
             chk = self.query_one("#chk_mtp_enable", Checkbox)
             if chk.value:
+                mtp_enabled = True
                 draft_n = self.query_one("#inp_mtp_draft_n", Input).value or "2"
                 np_val = self.query_one("#inp_mtp_np", Input).value or "1"
                 mtp_args = f"--spec-type draft-mtp --spec-draft-n-max {draft_n} -np {np_val}"
         
-        # ── Merge ────────────────────────────────────────────────────
-        merged = self._merge_args(base_args, profile_args)
-        if mtp_args:
-            merged = self._merge_args(merged, mtp_args)
+        # ── Apply changes ──────────────────────────────────────────────
+        merged = current_val
         
-        self.query_one("#inp_custom_args", Input).value = merged
+        # Ensure correct template engine flag is present and opposite is removed
+        merged = self._remove_flags(merged, [opposite_arg])
+        if base_arg not in merged.split():
+            merged = self._merge_args(merged, base_arg)
+        
+        # 1. Apply profile arguments if any
+        if profile_args:
+            merged = self._merge_args(merged, profile_args)
+            
+        # 2. Update MTP flags
+        if mtp_config:
+            # Clean out any existing MTP flags from the string
+            merged = self._remove_flags(merged, ["--spec-type", "--spec-draft-n-max", "-np"])
+            if mtp_enabled:
+                merged = self._merge_args(merged, mtp_args)
+                
+        self._expected_custom_args = merged
+        inp.value = merged
+
+    @staticmethod
+    def _remove_flags(arg_str: str, flags_to_remove: list) -> str:
+        """Remove specified flags and their values from the argument string."""
+        import shlex
+        if not arg_str:
+            return ""
+        try:
+            tokens = shlex.split(arg_str)
+        except Exception:
+            return arg_str
+            
+        new_tokens = []
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token in flags_to_remove:
+                if i + 1 < len(tokens) and not tokens[i + 1].startswith("-"):
+                    i += 2
+                else:
+                    i += 1
+            else:
+                new_tokens.append(token)
+                i += 1
+        return " ".join(shlex.quote(t) for t in new_tokens)
 
     @staticmethod
     def _merge_args(base: str, override: str) -> str:
