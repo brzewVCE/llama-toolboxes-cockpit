@@ -735,7 +735,7 @@ class LlamaCockpitApp(App):
             profile_zone.styles.display = "block"
             sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
             profile_names = list(profiles.keys())
-            options = [(name, name) for name in profile_names] + [("Custom", "Custom")]
+            options = [(name, name) for name in profile_names] + [("Default (empty)", "Default (empty)"), ("Custom", "Custom")]
             sel_profile.set_options(options)
             # Auto-select first profile
             sel_profile.value = profile_names[0]
@@ -758,6 +758,8 @@ class LlamaCockpitApp(App):
         if profile_name == "Custom" or not profile_name:
             self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
             return
+        elif profile_name == "Default (empty)":
+            self.query_one("#lbl_profile_desc", Label).update("No extra sampling parameters")
         elif profile_name in profiles:
             desc = profiles[profile_name].get("description", "")
             self.query_one("#lbl_profile_desc", Label).update(desc)
@@ -812,7 +814,10 @@ class LlamaCockpitApp(App):
         if profiles:
             sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
             profile_name = str(sel_profile.value) if sel_profile.value else ""
-            if profile_name and profile_name != "Custom" and profile_name in profiles:
+            if profile_name == "Default (empty)":
+                is_custom = False
+                profile_args = ""
+            elif profile_name and profile_name != "Custom" and profile_name in profiles:
                 is_custom = False
                 profile_args = profiles[profile_name].get("args", "")
         
