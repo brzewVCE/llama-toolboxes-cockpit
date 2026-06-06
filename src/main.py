@@ -795,51 +795,47 @@ class LlamaCockpitApp(App):
                 self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
 
     def _rebuild_extra_args(self):
-        """Rebuild the Extra Args field from current + profile args + MTP args."""
+        """Rebuild the Extra Args field from base + profile args + MTP args.
+        
+        Named profiles always rebuild from scratch (base_arg + profile + MTP)
+        to prevent stale args from a previous model/profile leaking through.
+        Custom mode preserves the user's manual edits and only touches MTP flags.
+        """
         inp = self.query_one("#inp_custom_args", Input)
         model_config = getattr(self, "_current_model_config", None)
         base_arg = "--no-jinja" if (model_config and model_config.get("no_jinja")) else "--jinja"
-        opposite_arg = "--no-jinja" if base_arg == "--jinja" else "--jinja"
-        current_val = inp.value or base_arg
         
-        # ── Profile args ────────────────────────────────────────────────
+        # ── Determine profile state ─────────────────────────────────────
         profile_args = ""
+        is_custom = True
         profiles = get_inference_profiles(model_config)
         if profiles:
             sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
             profile_name = str(sel_profile.value) if sel_profile.value else ""
             if profile_name and profile_name != "Custom" and profile_name in profiles:
+                is_custom = False
                 profile_args = profiles[profile_name].get("args", "")
         
-        # ── MTP args ────────────────────────────────────────────────────
-        mtp_enabled = False
-        mtp_args = ""
+        # ── Build merged args ───────────────────────────────────────────
+        if is_custom:
+            # Custom mode: preserve current value, only touch MTP flags below
+            merged = inp.value or base_arg
+        else:
+            # Named profile: always rebuild from scratch
+            merged = base_arg
+            if profile_args:
+                merged = self._merge_args(merged, profile_args)
+        
+        # ── MTP args (always add/remove cleanly) ────────────────────────
         mtp_config = get_mtp_config(model_config)
         if mtp_config:
+            # Strip any existing MTP flags first
+            merged = self._remove_flags(merged, ["--spec-type", "--spec-draft-n-max", "-np"])
             chk = self.query_one("#chk_mtp_enable", Checkbox)
             if chk.value:
-                mtp_enabled = True
                 draft_n = self.query_one("#inp_mtp_draft_n", Input).value or "2"
                 np_val = self.query_one("#inp_mtp_np", Input).value or "1"
                 mtp_args = f"--spec-type draft-mtp --spec-draft-n-max {draft_n} -np {np_val}"
-        
-        # ── Apply changes ──────────────────────────────────────────────
-        merged = current_val
-        
-        # Ensure correct template engine flag is present and opposite is removed
-        merged = self._remove_flags(merged, [opposite_arg])
-        if base_arg not in merged.split():
-            merged = self._merge_args(merged, base_arg)
-        
-        # 1. Apply profile arguments if any
-        if profile_args:
-            merged = self._merge_args(merged, profile_args)
-            
-        # 2. Update MTP flags
-        if mtp_config:
-            # Clean out any existing MTP flags from the string
-            merged = self._remove_flags(merged, ["--spec-type", "--spec-draft-n-max", "-np"])
-            if mtp_enabled:
                 merged = self._merge_args(merged, mtp_args)
                 
         self._expected_custom_args = merged
