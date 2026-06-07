@@ -232,5 +232,23 @@
         "args": "--temp 1.0 --top-p 0.95"
       }
     }
+  },
+  {
+    "name": "Qwopus3.6 27B v2 Chadrock ROCmFP4 MTP",
+    "repo": "jcbtc/qwopus3.6-27b-v2-chadrock-rocmfp4-mtp",
+    "mtp": {
+      "supported": true,
+      "default_draft_n": 3,
+      "default_np": 1
+    },
+    "compatible_toolboxes": [
+      "7.2.4-rocmfp4"
+    ],
+    "inference_profiles": {
+      "Strix Lean": {
+        "description": "Recommended for Strix Halo",
+        "args": "--temp 0.7 --top-p 0.9 --top-k 40 -b 512 -ub 512 -ctk q8_0 -ctv q8_0 --spec-draft-n-min 0 --spec-draft-p-min 0.0 --spec-draft-p-split 0.10 --spec-draft-type-k q4_0 --spec-draft-type-v q4_0 --reasoning on -dev ROCm0"
+      }
+    }
   }
 ]

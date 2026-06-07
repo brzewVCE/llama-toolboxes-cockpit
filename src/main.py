@@ -496,7 +496,16 @@ class LlamaCockpitApp(App):
 
         curated = load_models()
         sel_dl = self.query_one("#sel_download_model", SearchableSelect)
-        sel_dl.set_options([(m["name"], m["repo"]) for m in curated])
+        dl_options = []
+        for m in curated:
+            compat = m.get("compatible_toolboxes")
+            if compat:
+                compat_str = ", ".join(compat)
+                display_name = f"{m['name']} (Compatible with: {compat_str})"
+            else:
+                display_name = m["name"]
+            dl_options.append((display_name, m["repo"]))
+        sel_dl.set_options(dl_options)
 
     @work(thread=True)
     def check_app_updates(self):
@@ -699,6 +708,10 @@ class LlamaCockpitApp(App):
     @on(SearchableSelect.Changed, "#sel_engine")
     def on_engine_selected(self, event: SearchableSelect.Changed):
         self.refresh_server_images()
+
+    @on(SearchableSelect.Changed, "#sel_image")
+    def on_image_selected(self, event: SearchableSelect.Changed):
+        self.refresh_models()
 
     @on(SearchableSelect.Changed, "#sel_model")
     def on_model_selected(self, event: SearchableSelect.Changed):
@@ -943,13 +956,36 @@ class LlamaCockpitApp(App):
         sel_model = self.query_one("#sel_model", SearchableSelect)
         model_opts = []
         
+        try:
+            sel_image = self.query_one("#sel_image", SearchableSelect)
+            selected_image = sel_image.value or ""
+        except Exception:
+            selected_image = ""
+            
+        is_rocmfp4_image = "rocmfp4" in str(selected_image).lower()
+        
         for m in models:
             dt.add_row(m["name"])
+            
+            is_rocmfp4_model = "rocmfp4" in m["name"].lower()
+            if is_rocmfp4_image:
+                if not is_rocmfp4_model:
+                    continue
+            else:
+                if is_rocmfp4_model:
+                    continue
+                    
             model_opts.append((m["name"], m["path"]))
             
         sel_model.set_options(model_opts)
         if model_opts:
-            sel_model.value = model_opts[0][1]
+            previous_val = sel_model.value
+            if previous_val in [path for _, path in model_opts]:
+                sel_model.value = previous_val
+            else:
+                sel_model.value = model_opts[0][1]
+        else:
+            sel_model.value = ""
 
     def on_button_pressed(self, event: Button.Pressed):
         handlers = {
@@ -1115,6 +1151,29 @@ class LlamaCockpitApp(App):
         use_no_mmap = self.query_one("#chk_no_mmap", Checkbox).value
         custom_args = self.query_one("#inp_custom_args", Input).value
         hip_devices = self.query_one("#inp_hip_devices", Input).value
+
+        # Check compatibility
+        is_rocmfp4_image = "rocmfp4" in str(image).lower()
+        is_rocmfp4_model = model_path and "rocmfp4" in str(model_path).lower()
+        
+        if is_rocmfp4_image and not is_rocmfp4_model:
+            self.notify("The rocmfp4 toolbox only supports rocmfp4 quantized models.", severity="error")
+            return
+            
+        if is_rocmfp4_model and not is_rocmfp4_image:
+            self.notify("rocmfp4 models require a rocmfp4 compatible toolbox.", severity="error")
+            return
+            
+        if model_path:
+            model_config = get_model_config(model_path)
+            if model_config and "compatible_toolboxes" in model_config:
+                allowed = model_config["compatible_toolboxes"]
+                image_lower = str(image).lower()
+                compatible = any(alt.lower() in image_lower for alt in allowed)
+                if not compatible:
+                    allowed_str = ", ".join(allowed)
+                    self.notify(f"Model compatibility error: Only supported on {allowed_str}", severity="error")
+                    return
 
         if engine and image and model_path and ctx.isdigit():
             ngl_val = int(ngl) if ngl.isdigit() else 999

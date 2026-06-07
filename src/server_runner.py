@@ -49,6 +49,12 @@ def build_server_cmd(engine: str, image: str, model_path: str, context_size: int
             cmd.extend(["-e", f"ZE_AFFINITY_MASK={hip_devices}"])
         else:
             cmd.extend(["-e", f"HIP_VISIBLE_DEVICES={hip_devices}"])
+            
+    if "rocmfp4" in image.lower():
+        cmd.extend([
+            "-e", "HSA_OVERRIDE_GFX_VERSION=11.5.1",
+            "-e", "GGML_HIP_ENABLE_UNIFIED_MEMORY=1"
+        ])
         
     # Podman requires these flags to read host volumes without permission issues (SELinux / UID mapping)
     if engine == "podman":
