@@ -45,11 +45,43 @@ def get_model_config(selected_path: str) -> dict | None:
         return None
     curated = load_models()
     path_lower = selected_path.lower()
+    path_norm = path_lower.replace("-", "").replace("_", "")
+    
+    candidates = []
     for m in curated:
         repo_basename = m["repo"].split("/")[-1].lower()
+        
+        # 1. Exact repo_basename in path (e.g. folder name match)
         if repo_basename in path_lower:
-            return m
-    return None
+            candidates.append((len(repo_basename), 3, m))
+            continue
+            
+        # Clean suffix/infixes like -gguf, -gguf-mtp
+        clean_basename = repo_basename
+        if clean_basename.endswith("-gguf"):
+            clean_basename = clean_basename[:-5]
+        elif "-gguf-" in clean_basename:
+            clean_basename = clean_basename.replace("-gguf-", "-")
+            
+        # 2. Cleaned basename in path
+        if clean_basename in path_lower:
+            candidates.append((len(clean_basename), 2, m))
+            continue
+            
+        # 3. Normalized matching (ignoring hyphens and underscores)
+        clean_norm = clean_basename.replace("-", "").replace("_", "")
+        if clean_norm in path_norm:
+            candidates.append((len(clean_norm), 1, m))
+            
+    if not candidates:
+        return None
+        
+    # Sort candidates by:
+    # - Strategy priority (3 = exact, 2 = clean, 1 = normalized) descending
+    # - Match length descending (longer/more specific match wins)
+    candidates.sort(key=lambda x: (x[1], x[0]), reverse=True)
+    return candidates[0][2]
+
 
 
 def get_inference_profiles(model_config: dict) -> dict:
