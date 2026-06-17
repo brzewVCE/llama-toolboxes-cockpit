@@ -70,6 +70,37 @@ def save_active_platform(platform_id: str) -> bool:
         print(f"Error saving config: {e}")
         return False
 
+def get_default_toolbox(platform_id: str) -> str | None:
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                conf = json.load(f)
+                defaults = conf.get("default_toolboxes", {})
+                return defaults.get(platform_id)
+        except Exception:
+            pass
+    return None
+
+def save_default_toolbox(platform_id: str, toolbox_name: str) -> bool:
+    conf = {}
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                conf = json.load(f)
+        except Exception:
+            pass
+
+    defaults = conf.get("default_toolboxes", {})
+    defaults[platform_id] = toolbox_name
+    conf["default_toolboxes"] = defaults
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(conf, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"Error saving config: {e}")
+        return False
+
 def scan_local_models() -> list[dict]:
     models_dir = get_models_dir()
     if not models_dir.exists():

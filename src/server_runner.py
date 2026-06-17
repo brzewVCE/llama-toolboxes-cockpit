@@ -4,7 +4,8 @@ from .model_manager import resolve_model_path
 import shlex
 
 def build_server_cmd(engine: str, image: str, model_path: str, context_size: int, use_fa: bool, use_no_mmap: bool, custom_args: str, host: str = "localhost", port: str = "8080", ngl: int = 999, hip_devices: str = "", platform_id: str = "", engine_args: list[str] = None) -> list[str]:
-    models_dir = os.path.expanduser("~/models")
+    from .model_manager import get_models_dir
+    models_dir = str(get_models_dir())
     
     if engine_args is None:
         # fallback based on image/platform_id

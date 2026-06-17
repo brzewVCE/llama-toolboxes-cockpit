@@ -7,7 +7,7 @@ import os
 import subprocess
 
 from src.toolbox_manager import get_all_toolboxes, get_installed_toolboxes, detect_engines, get_os_toolbox_cmd, get_remote_image_date, create_toolbox, delete_toolbox
-from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir, is_quant_downloaded, get_active_platform, save_active_platform
+from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir, is_quant_downloaded, get_active_platform, save_active_platform, get_default_toolbox, save_default_toolbox
 from src.server_runner import build_server_cmd
 from src.config import load_models, get_platforms, get_platform, get_platform_registry, get_model_config, get_inference_profiles, get_mtp_config
 from src.widgets import ConfirmModal, SelectModal, SearchableSelect
@@ -367,6 +367,7 @@ class LlamaCockpitApp(App):
                         Button("Enter", id="btn_enter", variant="success"),
                         Button("Create/Update", id="btn_create_update", variant="warning"),
                         Button("Delete", id="btn_delete", variant="error"),
+                        Button("Set Default", id="btn_set_default", variant="primary"),
                         Button("Check Updates", id="btn_check_updates"),
                         Button("Refresh", id="btn_refresh"),
                         id="btn_row"
@@ -642,6 +643,10 @@ class LlamaCockpitApp(App):
         container = self.query_one("#toolbox_container", VerticalScroll)
         container.remove_children()
         
+        default_tag = get_default_toolbox(self.active_platform_id)
+        if not default_tag:
+            default_tag = platform.get("default_toolbox_tag")
+        
         for group_name, toolboxes in grouped_data.items():
             if not toolboxes: continue
             collapsed = group_name != "Official Toolboxes"
@@ -656,8 +661,12 @@ class LlamaCockpitApp(App):
                 else:
                     status_fmt = "[green]Running[/green]" if "Up" in tb.get("status", "") else "[dim]Downloaded[/dim]"
                 
+                desc = tb.get('description', '')
+                if default_tag and default_tag in tb.get('image', ''):
+                    desc = f"[bold #e57373][Default][/bold] {desc}"
+                
                 sel_fmt = "\\[x]" if tb['name'] in getattr(self, 'selected_toolboxes', set()) else "\\[ ]"
-                table.add_row(sel_fmt, tb['name'], tb.get('description', ''), status_fmt, tb.get('created', ''), "")
+                table.add_row(sel_fmt, tb['name'], desc, status_fmt, tb.get('created', ''), "")
                 
             btn_toggle = Button("Select/Deselect All", id=f"btn_toggle_{table.id}", classes="btn-toggle-all")
             col = Collapsible(Vertical(btn_toggle, table), title=f"{group_name} ({len(toolboxes)})", collapsed=collapsed)
@@ -703,7 +712,17 @@ class LlamaCockpitApp(App):
         images = sorted(set([tb['image'] for tb in installed] + configured_images))
         sel_image.set_options([(img, img) for img in images])
         if images:
-            sel_image.value = images[0]
+            default_tag = get_default_toolbox(self.active_platform_id)
+            if not default_tag and platform:
+                default_tag = platform.get("default_toolbox_tag")
+                
+            selected = images[0]
+            if default_tag:
+                for img in images:
+                    if default_tag in img:
+                        selected = img
+                        break
+            sel_image.value = selected
 
     @on(SearchableSelect.Changed, "#sel_engine")
     def on_engine_selected(self, event: SearchableSelect.Changed):
@@ -999,6 +1018,7 @@ class LlamaCockpitApp(App):
             "btn_save_models_path": self._handle_save_models_path,
             "btn_download": self._handle_download,
             "btn_switch_platform": self._handle_switch_platform,
+            "btn_set_default": self._handle_set_default,
         }
 
         btn_id = event.button.id
@@ -1008,6 +1028,27 @@ class LlamaCockpitApp(App):
             self._handle_toggle_select_all(btn_id)
 
     # ── Platform Switch Handler ─────────────────────────────────────
+
+    def _handle_set_default(self):
+        selected = self.get_selected_toolboxes()
+        if not selected:
+            self.notify("Please select a single toolbox to set as default.", severity="error")
+            return
+        if len(selected) > 1:
+            self.notify("Please select exactly one toolbox to set as default.", severity="error")
+            return
+            
+        tb = selected[0]
+        image = tb.get("image", "")
+        tag = image.split(":")[-1] if ":" in image else image
+        
+        if save_default_toolbox(self.active_platform_id, tag):
+            self.notify(f"Set {tag} as default for platform {self.active_platform_id}.", severity="success", timeout=5)
+            self.refresh_toolboxes()
+            self.refresh_server_images()
+        else:
+            self.notify("Failed to save default toolbox configuration.", severity="error")
+
 
     def _handle_switch_platform(self):
         platforms = get_platforms()
