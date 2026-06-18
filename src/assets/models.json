@@ -1,113 +1,23 @@
 [
   {
     "name": "Qwen 3.5 122B A10B",
-    "repo": "unsloth/Qwen3.5-122B-A10B-GGUF",
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking/reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks (e.g. WebDev)",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0 --repeat-penalty 1.0"
-      },
-      "Instruct (General)": {
-        "description": "Recommended for general instruct (non-thinking) tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Instruct (Reasoning)": {
-        "description": "Recommended for instruct (non-thinking) reasoning tasks",
-        "args": "--temp 1.0 --top-p 1.0 --top-k 40 --min-p 0.0 --presence-penalty 2.0 --repeat-penalty 1.0"
-      }
-    }
+    "repo": "unsloth/Qwen3.5-122B-A10B-GGUF"
   },
   {
     "name": "Qwen 3.5 122B A10B Uncensored (HauhauCS)",
-    "repo": "HauhauCS/Qwen3.5-122B-A10B-Uncensored-HauhauCS-Aggressive",
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0"
-      },
-      "Non-thinking (General)": {
-        "description": "Recommended for general non-thinking tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5"
-      },
-      "Non-thinking (Reasoning)": {
-        "description": "Recommended for reasoning tasks in non-thinking mode",
-        "args": "--temp 1.0 --top-p 1.0 --top-k 40 --min-p 0.0 --presence-penalty 2.0"
-      }
-    }
+    "repo": "HauhauCS/Qwen3.5-122B-A10B-Uncensored-HauhauCS-Aggressive"
   },
   {
     "name": "Qwen 3.6 35B A3B",
-    "repo": "unsloth/Qwen3.6-35B-A3B-GGUF",
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking/reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks (e.g. WebDev)",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0 --repeat-penalty 1.0"
-      },
-      "Instruct (General)": {
-        "description": "Recommended for general instruct (non-thinking) tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Instruct (Reasoning)": {
-        "description": "Recommended for instruct (non-thinking) reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      }
-    }
+    "repo": "unsloth/Qwen3.6-35B-A3B-GGUF"
   },
   {
     "name": "Qwen 3.6 35B A3B Uncensored (HauhauCS)",
-    "repo": "HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive",
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0"
-      },
-      "Non-thinking (General)": {
-        "description": "Recommended for general non-thinking tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5"
-      },
-      "Non-thinking (Reasoning)": {
-        "description": "Recommended for reasoning tasks in non-thinking mode",
-        "args": "--temp 1.0 --top-p 1.0 --top-k 40 --min-p 0.0 --presence-penalty 2.0"
-      }
-    }
+    "repo": "HauhauCS/Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive"
   },
   {
     "name": "Qwen 3.6 27B",
-    "repo": "unsloth/Qwen3.6-27B-GGUF",
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking/reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks (e.g. WebDev)",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0 --repeat-penalty 1.0"
-      },
-      "Instruct (General)": {
-        "description": "Recommended for general instruct (non-thinking) tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Instruct (Reasoning)": {
-        "description": "Recommended for instruct (non-thinking) reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      }
-    }
+    "repo": "unsloth/Qwen3.6-27B-GGUF"
   },
   {
     "name": "Qwen 3.6 27B MTP",
@@ -116,24 +26,6 @@
       "supported": true,
       "default_draft_n": 2,
       "default_np": 1
-    },
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking/reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks (e.g. WebDev)",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0 --repeat-penalty 1.0"
-      },
-      "Instruct (General)": {
-        "description": "Recommended for general instruct (non-thinking) tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Instruct (Reasoning)": {
-        "description": "Recommended for instruct (non-thinking) reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      }
     }
   },
   {
@@ -143,24 +35,6 @@
       "supported": true,
       "default_draft_n": 2,
       "default_np": 1
-    },
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking/reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks (e.g. WebDev)",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0 --repeat-penalty 1.0"
-      },
-      "Instruct (General)": {
-        "description": "Recommended for general instruct (non-thinking) tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Instruct (Reasoning)": {
-        "description": "Recommended for instruct (non-thinking) reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      }
     }
   },
   {
@@ -170,69 +44,23 @@
       "supported": true,
       "default_draft_n": 2,
       "default_np": 1
-    },
-    "inference_profiles": {
-      "Thinking (General)": {
-        "description": "Recommended for general thinking/reasoning tasks",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Thinking (Coding)": {
-        "description": "Recommended for precise coding tasks (e.g. WebDev)",
-        "args": "--temp 0.6 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0 --repeat-penalty 1.0"
-      },
-      "Instruct (General)": {
-        "description": "Recommended for general instruct (non-thinking) tasks",
-        "args": "--temp 0.7 --top-p 0.8 --top-k 20 --min-p 0.0 --presence-penalty 1.5 --repeat-penalty 1.0"
-      },
-      "Instruct (Reasoning)": {
-        "description": "Recommended for instruct (non-thinking) reasoning tasks",
-        "args": "--temp 1.0 --top-p 1.0 --top-k 40 --min-p 0.0 --presence-penalty 2.0 --repeat-penalty 1.0"
-      }
     }
   },
   {
     "name": "Gemma 4 26B A4B IT",
-    "repo": "unsloth/gemma-4-26B-A4B-it-GGUF",
-    "inference_profiles": {
-      "Default": {
-        "description": "Google recommended sampling parameters",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 64"
-      }
-    }
+    "repo": "unsloth/gemma-4-26B-A4B-it-GGUF"
   },
   {
     "name": "Gemma 4 31B IT",
-    "repo": "unsloth/gemma-4-31B-it-GGUF",
-    "inference_profiles": {
-      "Default": {
-        "description": "Google recommended sampling parameters",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 64"
-      }
-    }
+    "repo": "unsloth/gemma-4-31B-it-GGUF"
   },
   {
     "name": "Devstral 2 123B Instruct",
-    "repo": "unsloth/Devstral-2-123B-Instruct-2512-GGUF",
-    "inference_profiles": {
-      "Coding/Agentic": {
-        "description": "Mistral recommended for software engineering tasks",
-        "args": "--temp 0.15"
-      }
-    }
+    "repo": "unsloth/Devstral-2-123B-Instruct-2512-GGUF"
   },
   {
     "name": "GLM 4.7 Flash",
-    "repo": "unsloth/GLM-4.7-Flash-GGUF",
-    "inference_profiles": {
-      "General Use": {
-        "description": "Unsloth recommended for general chat",
-        "args": "--temp 1.0 --top-p 0.95 --min-p 0.01 --repeat-penalty 1.0"
-      },
-      "Tool Calling": {
-        "description": "Optimized for function/tool-calling",
-        "args": "--temp 0.7 --top-p 1.0 --min-p 0.01 --repeat-penalty 1.0"
-      }
-    }
+    "repo": "unsloth/GLM-4.7-Flash-GGUF"
   },
   {
     "name": "GPT OSS 120B",
@@ -249,33 +77,15 @@
   },
   {
     "name": "MiniMax M2.7",
-    "repo": "unsloth/MiniMax-M2.7-GGUF",
-    "inference_profiles": {
-      "Default": {
-        "description": "MiniMax recommended sampling parameters",
-        "args": "--temp 1.0 --top-p 0.95 --top-k 40"
-      }
-    }
+    "repo": "unsloth/MiniMax-M2.7-GGUF"
   },
   {
     "name": "Ministral 3 14B Instruct",
-    "repo": "unsloth/Ministral-3-14B-Instruct-2512-GGUF",
-    "inference_profiles": {
-      "Coding/Agentic": {
-        "description": "Mistral recommended for local/edge tasks",
-        "args": "--temp 0.15"
-      }
-    }
+    "repo": "unsloth/Ministral-3-14B-Instruct-2512-GGUF"
   },
   {
     "name": "Nemotron 3 Super 120B A12B",
-    "repo": "unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF",
-    "inference_profiles": {
-      "Default": {
-        "description": "NVIDIA recommended sampling parameters",
-        "args": "--temp 1.0 --top-p 0.95"
-      }
-    }
+    "repo": "unsloth/NVIDIA-Nemotron-3-Super-120B-A12B-GGUF"
   },
   {
     "name": "Qwopus3.6 27B v2 Chadrock ROCmFP4 MTP",
@@ -287,12 +97,6 @@
     },
     "compatible_toolboxes": [
       "rocm-7.2.4-rocmfp4"
-    ],
-    "inference_profiles": {
-      "Strix Lean": {
-        "description": "Recommended for Strix Halo",
-        "args": "--temp 0.7 --top-p 0.9 --top-k 40 -b 512 -ub 512 -ctk q8_0 -ctv q8_0 --spec-draft-n-min 0 --spec-draft-p-min 0.0 --spec-draft-p-split 0.10 --spec-draft-type-k q4_0 --spec-draft-type-v q4_0 --reasoning on -dev ROCm0"
-      }
-    }
+    ]
   }
 ]

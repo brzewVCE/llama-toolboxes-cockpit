@@ -2,6 +2,15 @@ import json
 import os
 from pathlib import Path
 
+from .config_manager import (
+    get_configs_dir,
+    save_configs_dir,
+    scan_local_configs,
+    get_all_configs,
+    save_custom_config,
+    delete_custom_config_file
+)
+
 ROOT_DIR = Path(__file__).parent
 ASSETS_DIR = ROOT_DIR / "assets"
 MODELS_JSON = ASSETS_DIR / "models.json"
@@ -91,11 +100,3 @@ def get_inference_profiles(model_config: dict) -> dict:
     return model_config.get("inference_profiles", {})
 
 
-def get_mtp_config(model_config: dict) -> dict | None:
-    """Returns the mtp config dict for a model, or None if MTP is not supported."""
-    if not model_config:
-        return None
-    mtp = model_config.get("mtp")
-    if mtp and mtp.get("supported"):
-        return mtp
-    return None

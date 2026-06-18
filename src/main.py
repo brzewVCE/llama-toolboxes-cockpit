@@ -9,7 +9,12 @@ import subprocess
 from src.toolbox_manager import get_all_toolboxes, get_installed_toolboxes, detect_engines, get_os_toolbox_cmd, get_remote_image_date, create_toolbox, delete_toolbox
 from src.model_manager import scan_local_models, get_hf_quants, get_download_cmd, get_models_dir, save_models_dir, is_quant_downloaded, get_active_platform, save_active_platform, get_default_toolbox, save_default_toolbox
 from src.server_runner import build_server_cmd
-from src.config import load_models, get_platforms, get_platform, get_platform_registry, get_model_config, get_inference_profiles, get_mtp_config
+from src.config import (
+    load_models, get_platforms, get_platform, get_platform_registry, 
+    get_model_config, get_inference_profiles,
+    get_configs_dir, save_configs_dir, scan_local_configs, 
+    get_all_configs, save_custom_config, delete_custom_config_file
+)
 from src.widgets import ConfirmModal, SelectModal, SearchableSelect
 import pyfiglet
 
@@ -269,6 +274,26 @@ class LlamaCockpitApp(App):
         height: 1fr;
     }
     
+    #config_manager_view {
+        height: 1fr;
+        padding: 0;
+    }
+    
+    #config_dir_zone {
+        height: 1fr;
+    }
+    
+    #local_config_list {
+        border: none;
+        height: 1fr;
+    }
+    
+    #config_btn_row {
+        margin-top: 1;
+        height: auto;
+        align: left middle;
+    }
+    
     .zone-title {
         color: #e57373;
         text-style: bold;
@@ -328,7 +353,7 @@ class LlamaCockpitApp(App):
         margin-bottom: 1;
     }
     
-    #mtp_zone, #profile_zone {
+    #profile_zone {
         display: none;
     }
     
@@ -340,13 +365,14 @@ class LlamaCockpitApp(App):
         width: 1fr;
     }
     
-    .mtp-params-row {
+    .profile-chips {
         height: auto;
-        max-height: 3;
+        margin-top: 0;
     }
     
-    .mtp-params-row .short-field {
-        margin-right: 2;
+    .profile-chip {
+        margin: 0 1 0 0;
+        min-width: 10;
     }
     """
 
@@ -392,26 +418,15 @@ class LlamaCockpitApp(App):
                         classes="inline-row"
                     ),
                     Vertical(
-                        Label("🧪 MTP (Multi-Token Prediction)", classes="zone-title"),
-                        Horizontal(
-                            Checkbox("Enable MTP Speculative Decoding", id="chk_mtp_enable", value=True),
-                            classes="options-row"
-                        ),
-                        Horizontal(
-                            Horizontal(Label("Draft Tokens", classes="inline-label"), Input(placeholder="2", id="inp_mtp_draft_n", value="2"), classes="short-field"),
-                            Horizontal(Label("Parallel Seq", classes="inline-label"), Input(placeholder="1", id="inp_mtp_np", value="1"), classes="short-field"),
-                            classes="mtp-params-row"
-                        ),
-                        id="mtp_zone", classes="model-zone"
-                    ),
-                    Vertical(
                         Label("🎛️ Inference Profile", classes="zone-title"),
                         Horizontal(
                             Label("Profile", classes="inline-label"),
-                            SearchableSelect(prompt="Select inference profile...", id="sel_inference_profile"),
+                            SearchableSelect(prompt="Select config to add...", id="sel_inference_profile"),
+                            Button("Add", id="btn_add_profile", variant="success"),
                             Label("", id="lbl_profile_desc"),
                             classes="inline-row"
                         ),
+                        Horizontal(id="profile_chips", classes="profile-chips"),
                         id="profile_zone", classes="model-zone"
                     ),
                     Horizontal(
@@ -448,7 +463,7 @@ class LlamaCockpitApp(App):
                         yield Label("📥 Curated HF Downloader", classes="zone-title")
                         with Horizontal(classes="inline-row"):
                             yield Label("Model Repo", classes="inline-label")
-                            yield SearchableSelect(prompt="Search curated models (e.g. Qwen, Gemma)...", id="sel_download_model")
+                            yield SearchableSelect(prompt="Search curated models or enter custom HF repo...", id="sel_download_model")
                             yield Button("Download", id="btn_download", variant="success")
                     
                     # Zone 2: Local Models Library
@@ -461,6 +476,42 @@ class LlamaCockpitApp(App):
                             yield Button("Scan Local", id="btn_scan_models", variant="primary")
                         
                         yield DataTable(id="local_model_list", cursor_type="row")
+            with TabPane("Config Manager", id="tab-configs"):
+                with Vertical(id="config_manager_view"):
+                    # Zone 1: Config Directory Config & Scan
+                    with Vertical(id="config_dir_zone", classes="model-zone"):
+                        yield Label("📂 Configs Directory", classes="zone-title")
+                        with Horizontal(classes="inline-row"):
+                            yield Label("Storage Path", classes="inline-label")
+                            yield Input(placeholder="e.g. ~/.llama-cockpit/configs", id="inp_configs_dir", value=str(get_configs_dir()))
+                            yield Button("Save Path", id="btn_save_configs_path")
+                            yield Button("Scan Local", id="btn_scan_configs", variant="primary")
+                        
+                        yield DataTable(id="local_config_list", cursor_type="row")
+                        
+                    # Zone 2: Config Editor
+                    with Vertical(id="config_editor_zone", classes="model-zone"):
+                        yield Label("🛠️ Edit / Create Config", classes="zone-title")
+                        with Horizontal(classes="inline-row"):
+                            yield Label("Select Config", classes="inline-label")
+                            yield SearchableSelect(prompt="Select a config to edit or create new...", id="sel_creator_config")
+                            yield Button("New Config", id="btn_new_config", variant="primary")
+                        
+                        with Horizontal(classes="inline-row"):
+                            yield Label("Config Name", classes="inline-label")
+                            yield Input(placeholder="e.g. My Custom Run", id="inp_config_name")
+                        
+                        with Horizontal(classes="inline-row"):
+                            yield Label("Commands/Args", classes="inline-label")
+                            yield Input(placeholder="e.g. --temp 0.8 --top-p 0.95", id="inp_config_commands")
+
+                        with Horizontal(classes="inline-row"):
+                            yield Label("Model Filters", classes="inline-label")
+                            yield Input(placeholder="e.g. *qwen*, *rocmfp4* (leave empty for global/loose)", id="inp_config_models")
+                        
+                        with Horizontal(id="config_btn_row"):
+                            yield Button("Save Config", id="btn_save_config", variant="success")
+                            yield Button("Delete Config", id="btn_delete_config", variant="error")
         yield Footer()
 
     def on_mount(self):
@@ -507,6 +558,7 @@ class LlamaCockpitApp(App):
                 display_name = m["name"]
             dl_options.append((display_name, m["repo"]))
         sel_dl.set_options(dl_options)
+        self.refresh_configs()
 
     @work(thread=True)
     def check_app_updates(self):
@@ -734,7 +786,7 @@ class LlamaCockpitApp(App):
 
     @on(SearchableSelect.Changed, "#sel_model")
     def on_model_selected(self, event: SearchableSelect.Changed):
-        """When a model is selected, configure MTP zone, inference profile zone, and extra args."""
+        """When a model is selected, configure inference profile zone and extra args."""
         selected_path = str(event.value) if event.value else ""
         model_config = get_model_config(selected_path)
         
@@ -747,136 +799,115 @@ class LlamaCockpitApp(App):
         self._expected_custom_args = base_arg
         inp.value = base_arg
         
-        mtp_zone = self.query_one("#mtp_zone", Vertical)
-        profile_zone = self.query_one("#profile_zone", Vertical)
-        
-        # ── MTP Zone ────────────────────────────────────────────────────
-        mtp_config = get_mtp_config(model_config)
-        if mtp_config:
-            mtp_zone.styles.display = "block"
-            chk = self.query_one("#chk_mtp_enable", Checkbox)
-            chk.value = True
-            self.query_one("#inp_mtp_draft_n", Input).value = str(mtp_config.get("default_draft_n", 2))
-            self.query_one("#inp_mtp_np", Input).value = str(mtp_config.get("default_np", 1))
-        else:
-            mtp_zone.styles.display = "none"
+        # Clear selected profiles
+        self._selected_profiles = []
+        self._refresh_profile_chips()
         
         # ── Inference Profile Zone ──────────────────────────────────────
-        profiles = get_inference_profiles(model_config)
-        if profiles:
-            profile_zone.styles.display = "block"
-            sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
-            profile_names = list(profiles.keys())
-            options = [(name, name) for name in profile_names] + [("Default (empty)", "Default (empty)"), ("Custom", "Custom")]
-            sel_profile.set_options(options)
-            # Auto-select first profile
-            sel_profile.value = profile_names[0]
-            desc = profiles[profile_names[0]].get("description", "")
-            self.query_one("#lbl_profile_desc", Label).update(desc)
-        else:
-            profile_zone.styles.display = "none"
-            self.query_one("#sel_inference_profile", SearchableSelect).set_options([])
-            self.query_one("#lbl_profile_desc", Label).update("")
+        self.refresh_server_profiles()
         
         self._rebuild_extra_args()
 
-    @on(SearchableSelect.Changed, "#sel_inference_profile")
-    def on_profile_changed(self, event: SearchableSelect.Changed):
-        """When a profile is selected, update description and rebuild extra args."""
-        profile_name = str(event.value) if event.value else ""
-        model_config = getattr(self, "_current_model_config", None)
-        profiles = get_inference_profiles(model_config)
-        
-        if profile_name == "Custom" or not profile_name:
-            self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
+    @on(Button.Pressed, "#btn_add_profile")
+    def on_add_profile(self, event: Button.Pressed):
+        """Add the currently selected profile to the active list."""
+        sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
+        profile_val = str(sel_profile.value) if sel_profile.value else ""
+        if not profile_val:
             return
-        elif profile_name == "Default (empty)":
-            self.query_one("#lbl_profile_desc", Label).update("No extra sampling parameters")
-        elif profile_name in profiles:
-            desc = profiles[profile_name].get("description", "")
-            self.query_one("#lbl_profile_desc", Label).update(desc)
         
+        selected = getattr(self, "_selected_profiles", [])
+        # No duplicates
+        if profile_val in selected:
+            self.notify("Config already added.", severity="warning")
+            return
+        
+        selected.append(profile_val)
+        self._selected_profiles = selected
+        self._refresh_profile_chips()
         self._rebuild_extra_args()
 
-    @on(Checkbox.Changed, "#chk_mtp_enable")
-    def on_mtp_toggled(self, event: Checkbox.Changed):
-        """When MTP is toggled, rebuild extra args."""
-        self._rebuild_extra_args()
+    @on(Button.Pressed, ".profile-chip")
+    def on_remove_profile_chip(self, event: Button.Pressed):
+        """Remove a profile chip when clicked."""
+        chip_name = event.button.name or ""
+        try:
+            idx = int(chip_name)
+        except (ValueError, TypeError):
+            return
+        selected = getattr(self, "_selected_profiles", [])
+        if 0 <= idx < len(selected):
+            selected.pop(idx)
+            self._selected_profiles = selected
+            self._refresh_profile_chips()
+            self._rebuild_extra_args()
 
-    @on(Input.Changed, "#inp_mtp_draft_n")
-    def on_mtp_draft_changed(self, event: Input.Changed):
-        """When MTP draft tokens change, rebuild extra args."""
-        self._rebuild_extra_args()
+    def _refresh_profile_chips(self):
+        """Rebuild the horizontal row of profile chips from _selected_profiles."""
+        chips_container = self.query_one("#profile_chips", Horizontal)
+        chips_container.remove_children()
+        selected = getattr(self, "_selected_profiles", [])
+        for i, prof_val in enumerate(selected):
+            label = self._profile_val_to_label(prof_val)
+            chip = Button(f"✕ {label}", name=str(i), variant="error", classes="profile-chip")
+            chips_container.mount(chip)
 
-    @on(Input.Changed, "#inp_mtp_np")
-    def on_mtp_np_changed(self, event: Input.Changed):
-        """When MTP parallel sequences change, rebuild extra args."""
-        self._rebuild_extra_args()
+    def _profile_val_to_label(self, profile_val: str) -> str:
+        """Convert a profile value key to a human-readable label."""
+        if profile_val.startswith("curated_"):
+            return profile_val[8:]
+        elif profile_val.startswith("config_"):
+            return f"\\[{profile_val[7:]}]"
+        return profile_val
 
     @on(Input.Changed, "#inp_custom_args")
     def on_custom_args_changed(self, event: Input.Changed):
-        """When user manually edits Extra Args, switch profile to Custom."""
+        """Track when user manually edits Extra Args."""
         if getattr(self, "_expected_custom_args", None) == event.value:
             return
         
-        # User is manually editing — switch profile dropdown to "Custom"
-        model_config = getattr(self, "_current_model_config", None)
-        profiles = get_inference_profiles(model_config)
-        if profiles:
-            sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
-            if sel_profile.value != "Custom":
-                sel_profile.value = "Custom"
-                self.query_one("#lbl_profile_desc", Label).update("Manual configuration")
+        # User is manually editing
+        self.query_one("#lbl_profile_desc", Label).update("Manual edit")
 
     def _rebuild_extra_args(self):
-        """Rebuild the Extra Args field from base + profile args + MTP args.
+        """Rebuild the Extra Args field from base + all selected profile args.
         
-        Named profiles always rebuild from scratch (base_arg + profile + MTP)
-        to prevent stale args from a previous model/profile leaking through.
-        Custom mode preserves the user's manual edits and only touches MTP flags.
+        Merges args from all selected profiles in order.
         """
         inp = self.query_one("#inp_custom_args", Input)
         model_config = getattr(self, "_current_model_config", None)
         base_arg = "--no-jinja" if (model_config and model_config.get("no_jinja")) else "--jinja"
         
-        # ── Determine profile state ─────────────────────────────────────
-        profile_args = ""
-        is_custom = True
-        profiles = get_inference_profiles(model_config)
-        if profiles:
-            sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
-            profile_name = str(sel_profile.value) if sel_profile.value else ""
-            if profile_name == "Default (empty)":
-                is_custom = False
-                profile_args = ""
-            elif profile_name and profile_name != "Custom" and profile_name in profiles:
-                is_custom = False
-                profile_args = profiles[profile_name].get("args", "")
+        selected = getattr(self, "_selected_profiles", [])
         
-        # ── Build merged args ───────────────────────────────────────────
-        if is_custom:
-            # Custom mode: preserve current value, only touch MTP flags below
-            merged = inp.value or base_arg
-        else:
-            # Named profile: always rebuild from scratch
-            merged = base_arg
+        # Start from base
+        merged = base_arg
+        
+        # Merge each selected profile's args in order
+        for profile_val in selected:
+            profile_args = self._get_profile_args(profile_val)
             if profile_args:
                 merged = self._merge_args(merged, profile_args)
         
-        # ── MTP args (always add/remove cleanly) ────────────────────────
-        mtp_config = get_mtp_config(model_config)
-        if mtp_config:
-            # Strip any existing MTP flags first
-            merged = self._remove_flags(merged, ["--spec-type", "--spec-draft-n-max", "-np"])
-            chk = self.query_one("#chk_mtp_enable", Checkbox)
-            if chk.value:
-                draft_n = self.query_one("#inp_mtp_draft_n", Input).value or "2"
-                np_val = self.query_one("#inp_mtp_np", Input).value or "1"
-                mtp_args = f"--spec-type draft-mtp --spec-draft-n-max {draft_n} -np {np_val}"
-                merged = self._merge_args(merged, mtp_args)
-                
         self._expected_custom_args = merged
         inp.value = merged
+
+    def _get_profile_args(self, profile_val: str) -> str:
+        """Get the args string for a given profile value."""
+        model_config = getattr(self, "_current_model_config", None)
+        
+        if profile_val.startswith("curated_"):
+            curated_name = profile_val[8:]
+            profiles = get_inference_profiles(model_config)
+            if curated_name in profiles:
+                return profiles[curated_name].get("args", "")
+        elif profile_val.startswith("config_"):
+            cfg_name = profile_val[7:]
+            configs = getattr(self, "current_configs", [])
+            selected_cfg = next((c for c in configs if c["name"] == cfg_name), None)
+            if selected_cfg:
+                return selected_cfg.get("args", "")
+        return ""
 
     @staticmethod
     def _remove_flags(arg_str: str, flags_to_remove: list) -> str:
@@ -1019,6 +1050,11 @@ class LlamaCockpitApp(App):
             "btn_download": self._handle_download,
             "btn_switch_platform": self._handle_switch_platform,
             "btn_set_default": self._handle_set_default,
+            "btn_save_configs_path": self._handle_save_configs_path,
+            "btn_scan_configs": self._handle_scan_configs,
+            "btn_new_config": self._handle_new_config,
+            "btn_save_config": self._handle_save_config,
+            "btn_delete_config": self._handle_delete_config,
         }
 
         btn_id = event.button.id
@@ -1277,16 +1313,28 @@ class LlamaCockpitApp(App):
     def _handle_download(self):
         repo = self.query_one("#sel_download_model", SearchableSelect).value
         if not isinstance(repo, str) or not repo:
+            raw_val = self.query_one("#sel_download_model", SearchableSelect).query_one(Input).value.strip()
+            if raw_val:
+                repo = raw_val
+        
+        if not repo:
+            self.notify("Please enter or select a model repository path.", severity="warning")
             return
+            
         with self.suspend():
             print(f"\nQuerying Hugging Face for {repo}...")
         quants = get_hf_quants(repo)
         if not quants:
+            self.notify(f"Hugging Face repository '{repo}' not found or contains no GGUF files.", severity="error", timeout=5)
             with self.suspend():
-                print("No GGUF quants found.")
+                print(f"Hugging Face repository '{repo}' not found or has no GGUF files.")
                 try: input("Press Enter to return...")
                 except: pass
             return
+
+    @on(Input.Submitted, "#sel_download_model Input")
+    def on_download_input_submitted(self, event: Input.Submitted):
+        self._handle_download()
 
         display_options = []
         installed_flags = []
@@ -1395,6 +1443,164 @@ class LlamaCockpitApp(App):
             except EOFError:
                 pass
         self.refresh_models()
+
+    # ── Config Creator Helpers ────────────────────────────────────
+
+    def refresh_configs(self, select_name: str = None):
+        configs = get_all_configs()
+        self.current_configs = configs
+        
+        # Populate DataTable
+        dt = self.query_one("#local_config_list", DataTable)
+        dt.clear(columns=True)
+        dt.add_columns("Type", "Name", "Model Filters", "Commands/Args")
+        for c in configs:
+            t_str = "[cyan]Built-in[/cyan]" if not c.get("is_custom") else "[green]Custom[/green]"
+            models_str = ", ".join(c.get("models", [])) or "*"
+            dt.add_row(t_str, c["name"], models_str, c.get("args", ""))
+            
+        # Populate SearchableSelect dropdown
+        sel = self.query_one("#sel_creator_config", SearchableSelect)
+        options = []
+        for c in configs:
+            opt_label = f"\\[{c['name']}]" if c.get("is_custom") else c["name"]
+            options.append((opt_label, c["name"]))
+        sel.set_options(options)
+        
+        if select_name:
+            sel.value = select_name
+        else:
+            sel.value = ""
+
+    def refresh_server_profiles(self):
+        sel_model = self.query_one("#sel_model", SearchableSelect)
+        selected_path = str(sel_model.value) if sel_model.value else ""
+        model_filename = selected_path.split("/")[-1] if selected_path else ""
+        
+        model_config = getattr(self, "_current_model_config", None)
+        
+        # Get curated/built-in profiles from models.json for this model
+        curated_profiles = get_inference_profiles(model_config)
+        
+        # Get all configs (built-in and custom)
+        # Filter them: keep those where model matches at least one pattern, OR models is empty/["*"]
+        import fnmatch
+        all_configs = get_all_configs()
+        matching_configs = []
+        for c in all_configs:
+            patterns = c.get("models", [])
+            # Global config if no patterns or only "*"
+            if not patterns or patterns == ["*"]:
+                matching_configs.append(c)
+            elif model_filename:
+                # Check if matches any pattern
+                matches = False
+                for p in patterns:
+                    if fnmatch.fnmatch(model_filename.lower(), p.lower()):
+                        matches = True
+                        break
+                if matches:
+                    matching_configs.append(c)
+        
+        profile_zone = self.query_one("#profile_zone", Vertical)
+        if curated_profiles or matching_configs:
+            profile_zone.styles.display = "block"
+            sel_profile = self.query_one("#sel_inference_profile", SearchableSelect)
+            
+            options = []
+            # 1. Curated profiles from models.json
+            for name in curated_profiles.keys():
+                options.append((name, f"curated_{name}"))
+            # 2. Scanned configurations (built-in or custom)
+            for c in matching_configs:
+                opt_label = f"\\[{c['name']}]" if c.get("is_custom") else c["name"]
+                options.append((opt_label, f"config_{c['name']}"))
+            
+            sel_profile.set_options(options)
+            if options:
+                sel_profile.value = options[0][1]
+        else:
+            profile_zone.styles.display = "none"
+            self.query_one("#sel_inference_profile", SearchableSelect).set_options([])
+            self.query_one("#lbl_profile_desc", Label).update("")
+
+    @on(SearchableSelect.Changed, "#sel_creator_config")
+    def on_creator_config_selected(self, event: SearchableSelect.Changed):
+        name = event.value
+        if name:
+            configs = getattr(self, "current_configs", [])
+            selected_cfg = next((c for c in configs if c["name"] == name), None)
+            if selected_cfg:
+                self.query_one("#inp_config_name", Input).value = selected_cfg["name"]
+                self.query_one("#inp_config_commands", Input).value = selected_cfg.get("args", "")
+                self.query_one("#inp_config_models", Input).value = ", ".join(selected_cfg.get("models", []))
+
+    def _handle_new_config(self):
+        self.query_one("#sel_creator_config", SearchableSelect).value = ""
+        self.query_one("#inp_config_name", Input).value = ""
+        self.query_one("#inp_config_commands", Input).value = ""
+        self.query_one("#inp_config_models", Input).value = ""
+        self.notify("Ready to create a new configuration.")
+
+    def _handle_save_config(self):
+        name = self.query_one("#inp_config_name", Input).value.strip()
+        commands = self.query_one("#inp_config_commands", Input).value.strip()
+        models_raw = self.query_one("#inp_config_models", Input).value.strip()
+        
+        if not name:
+            self.notify("Config name cannot be empty.", severity="error")
+            return
+            
+        models_list = [p.strip() for p in models_raw.split(",") if p.strip()]
+        
+        if save_custom_config(name, commands, models_list):
+            self.notify(f"Configuration '{name}' saved.", severity="success")
+            self.refresh_configs(select_name=name)
+            self.refresh_server_profiles()
+        else:
+            self.notify("Failed to save configuration.", severity="error")
+
+    def _handle_delete_config(self):
+        name = self.query_one("#inp_config_name", Input).value.strip()
+        if not name:
+            self.notify("No configuration name specified to delete.", severity="warning")
+            return
+            
+        configs = getattr(self, "current_configs", [])
+        selected_cfg = next((c for c in configs if c["name"] == name), None)
+        
+        if not selected_cfg:
+            self.notify(f"Configuration '{name}' not found.", severity="error")
+            return
+            
+        if not selected_cfg.get("is_custom"):
+            self.notify("Built-in configurations cannot be deleted.", severity="error")
+            return
+            
+        filename = selected_cfg.get("filename")
+        if delete_custom_config_file(filename):
+            self.notify(f"Deleted configuration '{name}'.", severity="success")
+            self.query_one("#inp_config_name", Input).value = ""
+            self.query_one("#inp_config_commands", Input).value = ""
+            self.query_one("#inp_config_models", Input).value = ""
+            self.refresh_configs()
+            self.refresh_server_profiles()
+        else:
+            self.notify("Failed to delete configuration file.", severity="error")
+
+    def _handle_save_configs_path(self):
+        new_path = self.query_one("#inp_configs_dir", Input).value.strip()
+        if save_configs_dir(new_path):
+            self.notify(f"Configs directory updated to {new_path}")
+            self.refresh_configs()
+            self.refresh_server_profiles()
+        else:
+            self.notify("Failed to save configs directory.", severity="error")
+
+    def _handle_scan_configs(self):
+        self.refresh_configs()
+        self.refresh_server_profiles()
+        self.notify("Configs directory scanned.")
 
 def cli_main():
     app = LlamaCockpitApp()

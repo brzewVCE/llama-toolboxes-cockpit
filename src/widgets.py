@@ -225,8 +225,9 @@ class SearchableSelect(Widget):
                 label = l
                 break
         inp = self.query_one(Input)
+        clean_label = label.replace("\\[", "[")
         with inp.prevent(Input.Changed):
-            inp.value = label
+            inp.value = clean_label
         self.post_message(self.Changed(new_value, self))
 
     def focus_input(self) -> None:
@@ -270,8 +271,9 @@ class SearchableSelect(Widget):
         """Called by the overlay when user selects an option (keyboard or mouse)."""
         self._current_value = value
         inp = self.query_one(Input)
+        clean_label = label.replace("\\[", "[")
         with inp.prevent(Input.Changed):
-            inp.value = label
+            inp.value = clean_label
         self._close_overlay()
         self.post_message(self.Changed(value, self))
 
@@ -321,9 +323,15 @@ class SearchableSelect(Widget):
             event.stop()
             self._overlay.cursor_up()
         elif event.key == "enter":
-            event.prevent_default()
-            event.stop()
-            self._overlay.select_current()
+            if self._overlay and self._overlay.is_attached:
+                opt_list = self._overlay.query_one(OptionList)
+                idx = opt_list.highlighted
+                if idx is not None and 0 <= idx < len(self._overlay._options):
+                    event.prevent_default()
+                    event.stop()
+                    self._overlay.select_current()
+                    return
+            self._close_overlay()
         elif event.key == "escape":
             event.prevent_default()
             event.stop()
