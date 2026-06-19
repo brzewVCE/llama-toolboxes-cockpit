@@ -21,30 +21,15 @@
   },
   {
     "name": "Qwen 3.6 27B MTP",
-    "repo": "unsloth/Qwen3.6-27B-MTP-GGUF",
-    "mtp": {
-      "supported": true,
-      "default_draft_n": 2,
-      "default_np": 1
-    }
+    "repo": "unsloth/Qwen3.6-27B-MTP-GGUF"
   },
   {
     "name": "Qwen 3.6 35B A3B MTP",
-    "repo": "unsloth/Qwen3.6-35B-A3B-MTP-GGUF",
-    "mtp": {
-      "supported": true,
-      "default_draft_n": 2,
-      "default_np": 1
-    }
+    "repo": "unsloth/Qwen3.6-35B-A3B-MTP-GGUF"
   },
   {
     "name": "Qwen 3.5 122B A10B MTP",
-    "repo": "wimmmm/Qwen3.5-122B-A10B-GGUF-MTP",
-    "mtp": {
-      "supported": true,
-      "default_draft_n": 2,
-      "default_np": 1
-    }
+    "repo": "wimmmm/Qwen3.5-122B-A10B-GGUF-MTP"
   },
   {
     "name": "Gemma 4 26B A4B IT",
@@ -90,11 +75,6 @@
   {
     "name": "Qwopus3.6 27B v2 Chadrock ROCmFP4 MTP",
     "repo": "jcbtc/qwopus3.6-27b-v2-chadrock-rocmfp4-mtp",
-    "mtp": {
-      "supported": true,
-      "default_draft_n": 3,
-      "default_np": 1
-    },
     "compatible_toolboxes": [
       "rocm-7.2.4-rocmfp4"
     ]

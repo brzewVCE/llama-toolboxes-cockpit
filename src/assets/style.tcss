@@ -247,6 +247,26 @@ Button {
     height: 1fr;
 }
 
+#config_manager_view {
+    height: 1fr;
+    padding: 0;
+}
+
+#config_dir_zone {
+    height: 1fr;
+}
+
+#local_config_list {
+    border: none;
+    height: 1fr;
+}
+
+#config_btn_row {
+    margin-top: 1;
+    height: auto;
+    align: left middle;
+}
+
 .zone-title {
     color: #e57373;
     text-style: bold;
@@ -310,7 +330,6 @@ SelectModal {
     margin-bottom: 1;
 }
 
-#mtp_zone,
 #profile_zone {
     display: none;
 }
@@ -323,11 +342,12 @@ SelectModal {
     width: 1fr;
 }
 
-.mtp-params-row {
+.profile-chips {
     height: auto;
-    max-height: 3;
+    margin-top: 0;
 }
 
-.mtp-params-row .short-field {
-    margin-right: 2;
+.profile-chip {
+    margin: 0 1 0 0;
+    min-width: 10;
 }

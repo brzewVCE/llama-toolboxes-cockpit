@@ -226,7 +226,7 @@ def get_download_cmd(repo: str, quant_pattern: str) -> list[str]:
     cmd = [
         hf_bin, "download",
         repo,
-        download_pattern,
+        "--include", download_pattern,
         "--local-dir", final_dir
     ]
     return cmd
