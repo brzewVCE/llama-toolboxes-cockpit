@@ -3,6 +3,11 @@ import os
 import urllib.request
 import json
 import shutil
+import functools
+from src.config import logger
+
+# Podman workaround marker for containers with missing/corrupted creation time
+PODMAN_NO_DATE_MARKER = "292 years ago"
 
 def detect_engines() -> list[str]:
     engines = []
@@ -12,64 +17,69 @@ def detect_engines() -> list[str]:
         engines.append("docker")
     return engines
 
-def get_toolbox_engine() -> str:
-    if os.path.exists("/etc/os-release"):
+@functools.lru_cache(maxsize=1)
+def _is_ubuntu_debian_arch() -> bool:
+    """Check if the OS is Ubuntu, Debian, or Arch Linux."""
+    if not os.path.exists("/etc/os-release"):
+        return False
+    try:
         with open("/etc/os-release", "r") as f:
             content = f.read().lower()
-            if "id=ubuntu" in content or "id=debian" in content or "id=arch" in content:
-                engines = detect_engines()
-                return "podman" if "podman" in engines else "docker"
+        return any(dist in content for dist in ("id=ubuntu", "id=debian", "id=arch"))
+    except Exception:
+        logger.exception("Failed to read /etc/os-release")
+        return False
+
+@functools.lru_cache(maxsize=1)
+def get_toolbox_engine() -> str:
+    if _is_ubuntu_debian_arch():
+        engines = detect_engines()
+        return "podman" if "podman" in engines else "docker"
     return "podman"
 
+@functools.lru_cache(maxsize=1)
 def get_os_toolbox_cmd() -> str:
-    if os.path.exists("/etc/os-release"):
-        with open("/etc/os-release", "r") as f:
-            content = f.read().lower()
-            if "id=ubuntu" in content or "id=debian" in content or "id=arch" in content:
-                return "distrobox"
-    return "toolbox"
+    return "distrobox" if _is_ubuntu_debian_arch() else "toolbox"
 
 def get_installed_toolboxes(registry_match: str, specific_engine: str = None) -> list[dict]:
     """Returns a list of dicts with name, image, status, engine."""
     engines = [specific_engine] if specific_engine else detect_engines()
     toolboxes = []
     
+    r_norm = registry_match.replace("docker.io/", "") if registry_match else ""
+
     for engine in engines:
         try:
             res = subprocess.run(
                 [engine, "ps", "-a", "--format", "{{.Names}}|{{.Image}}|{{.Status}}|{{.CreatedAt}}"], 
                 capture_output=True, text=True, check=True
             )
-            lines = res.stdout.strip().split('\n')
-            for line in lines:
-                if not line: continue
-                parts = line.split('|')
-                if len(parts) >= 3:
-                    if len(parts) >= 3:
-                        name, image, status = parts[0], parts[1], parts[2]
-                        name = name.strip()
-                        image = image.strip()
-                        status = status.strip()
-                        status = status.replace("292 years ago", "Unknown Date")
-                        
-                        created = ""
-                        if len(parts) >= 4:
-                            created_raw = parts[3].strip()
-                            created = created_raw.split()[0] if created_raw else ""
-                        
-                        # Normalize by stripping docker.io/ prefix for robust matching
-                        r_norm = registry_match.replace("docker.io/", "") if registry_match else ""
-                        i_norm = image.replace("docker.io/", "")
-                        if r_norm and r_norm in i_norm:
-                            toolboxes.append({
-                                "name": name,
-                                "image": image,
-                                "status": status,
-                                "created": created,
-                                "engine": engine
-                            })
+            for line in res.stdout.strip().split('\n'):
+                if not line:
+                    continue
+                parts = [p.strip() for p in line.split('|')]
+                if len(parts) < 3:
+                    continue
+                
+                name, image, status = parts[0], parts[1], parts[2]
+                status = status.replace(PODMAN_NO_DATE_MARKER, "Unknown Date")
+                
+                created = parts[3].split()[0] if len(parts) >= 4 and parts[3] else ""
+                
+                i_norm = image.replace("docker.io/", "")
+                if r_norm and r_norm not in i_norm:
+                    continue
+
+                toolboxes.append({
+                    "name": name,
+                    "image": image,
+                    "status": status,
+                    "created": created,
+                    "engine": engine
+                })
         except Exception:
-            pass
+            logger.exception(f"Failed to list installed toolboxes using {engine}")
+            
     return toolboxes
 
 def get_all_toolboxes(registry_match: str, config_data: dict) -> dict:
@@ -156,4 +166,5 @@ def get_remote_image_date(image: str) -> str:
             data = json.loads(response.read().decode())
             return data.get("last_updated")
     except Exception:
+        logger.exception(f"Failed to fetch remote image date for {image}")
         return None

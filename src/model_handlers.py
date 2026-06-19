@@ -5,9 +5,10 @@ from textual.widgets import Input, DataTable
 
 from src.model_manager import (
     scan_local_models, get_hf_quants, get_download_cmd,
-    save_models_dir, is_quant_downloaded,
+    save_models_dir, is_quant_downloaded, get_models_dir,
 )
 from src.widgets import ConfirmModal, SelectModal, SearchableSelect
+from src.config import logger
 
 import os
 import subprocess
@@ -32,6 +33,7 @@ class ModelHandlersMixin:
             sel_image = self.query_one("#sel_image", SearchableSelect)
             selected_image = sel_image.value or ""
         except Exception:
+            logger.exception("Failed to get selected image from SearchableSelect")
             selected_image = ""
 
         is_rocmfp4_image = "rocmfp4" in str(selected_image).lower()
@@ -105,8 +107,10 @@ class ModelHandlersMixin:
         installed_flags = []
         with self.suspend():
             print("\nChecking local installation status...")
+        models_dir = get_models_dir()
+        walk_cache = list(os.walk(models_dir)) if models_dir.exists() else []
         for q in quants:
-            if is_quant_downloaded(repo, q):
+            if is_quant_downloaded(repo, q, walk_cache=walk_cache):
                 display_options.append(f"[green]✓ Installed[/green]  {q}")
                 installed_flags.append(True)
             else:
@@ -121,7 +125,6 @@ class ModelHandlersMixin:
             self._on_quant_selected
         )
 
-    @on(Input.Submitted, "#sel_download_model Input")
     def on_download_input_submitted(self, event: Input.Submitted):
         self._handle_download()
 
@@ -160,6 +163,7 @@ class ModelHandlersMixin:
                 print(f"\n[ERROR] Download failed with exit code {e.returncode}.")
             except Exception as e:
                 print(f"\n[ERROR] An unexpected error occurred: {e}")
+                logger.exception("Unexpected error in _do_download_quant")
             try:
                 input("\nPress Enter to return to UI...")
             except EOFError:

@@ -98,7 +98,6 @@ class ConfigHandlersMixin:
 
     # ── Config Selection ─────────────────────────────────────────────
 
-    @on(SearchableSelect.Changed, "#sel_creator_config")
     def on_creator_config_selected(self, event: SearchableSelect.Changed):
         name = event.value
         if name:
@@ -108,6 +107,16 @@ class ConfigHandlersMixin:
                 self.query_one("#inp_config_name", Input).value = selected_cfg["name"]
                 self.query_one("#inp_config_commands", Input).value = selected_cfg.get("args", "")
                 self.query_one("#inp_config_models", Input).value = ", ".join(selected_cfg.get("models", []))
+
+    def on_config_row_selected(self, event: DataTable.RowSelected):
+        """When a config row is selected in the DataTable, load it into the editor."""
+        try:
+            row_data = event.data_table.get_row(event.row_key)
+            name = row_data[1]  # Name column is at index 1
+            if name:
+                self.query_one("#sel_creator_config", SearchableSelect).value = name
+        except Exception:
+            logger.exception("Failed to handle config row selection")
 
     # ── Config Handlers ──────────────────────────────────────────────
 

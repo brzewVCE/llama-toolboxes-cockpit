@@ -5,101 +5,51 @@ import json
 import fnmatch
 from huggingface_hub import HfApi
 from pathlib import Path
-
-CONFIG_FILE = Path(os.path.expanduser("~/.llama-cockpit.conf"))
+from src.config import read_user_config, write_user_config, logger
 
 def get_models_dir() -> Path:
-    if CONFIG_FILE.exists():
+    conf = read_user_config()
+    if "models_dir" in conf:
         try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-                if "models_dir" in conf:
-                    return Path(os.path.expanduser(conf["models_dir"]))
+            return Path(os.path.expanduser(conf["models_dir"]))
         except Exception:
-            pass
+            logger.exception("Failed to resolve models directory path")
     return Path(os.path.expanduser("~/models"))
 
 def save_models_dir(path_str: str) -> bool:
-    conf = {}
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-        except Exception:
-            pass
-    
+    conf = read_user_config()
     conf["models_dir"] = path_str
-    try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(conf, f, indent=4)
-        
-        new_dir = Path(os.path.expanduser(path_str))
-        new_dir.mkdir(parents=True, exist_ok=True)
-        return True
-    except Exception as e:
-        print(f"Error saving config: {e}")
-        return False
+    if write_user_config(conf):
+        try:
+            new_dir = Path(os.path.expanduser(path_str))
+            new_dir.mkdir(parents=True, exist_ok=True)
+            return True
+        except Exception:
+            logger.exception("Failed to create models directory")
+    return False
 
 def get_active_platform() -> str:
     """Reads the active platform ID from config, defaults to 'strix-halo'."""
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-                return conf.get("active_platform", "strix-halo")
-        except Exception:
-            pass
-    return "strix-halo"
+    conf = read_user_config()
+    return conf.get("active_platform", "strix-halo")
 
 def save_active_platform(platform_id: str) -> bool:
     """Persists the active platform ID to the config file."""
-    conf = {}
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-        except Exception:
-            pass
-
+    conf = read_user_config()
     conf["active_platform"] = platform_id
-    try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(conf, f, indent=4)
-        return True
-    except Exception as e:
-        print(f"Error saving config: {e}")
-        return False
+    return write_user_config(conf)
 
 def get_default_toolbox(platform_id: str) -> str | None:
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-                defaults = conf.get("default_toolboxes", {})
-                return defaults.get(platform_id)
-        except Exception:
-            pass
-    return None
+    conf = read_user_config()
+    defaults = conf.get("default_toolboxes", {})
+    return defaults.get(platform_id)
 
 def save_default_toolbox(platform_id: str, toolbox_name: str) -> bool:
-    conf = {}
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-        except Exception:
-            pass
-
+    conf = read_user_config()
     defaults = conf.get("default_toolboxes", {})
     defaults[platform_id] = toolbox_name
     conf["default_toolboxes"] = defaults
-    try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(conf, f, indent=4)
-        return True
-    except Exception as e:
-        print(f"Error saving config: {e}")
-        return False
+    return write_user_config(conf)
 
 def scan_local_models() -> list[dict]:
     models_dir = get_models_dir()
@@ -122,7 +72,7 @@ def scan_local_models() -> list[dict]:
                     
     return [{"name": m, "path": str(models_dir / m)} for m in sorted(list(found))]
 
-def is_quant_downloaded(repo: str, quant: str) -> bool:
+def is_quant_downloaded(repo: str, quant: str, walk_cache: list = None) -> bool:
     models_dir = get_models_dir()
     if not models_dir.exists():
         return False
@@ -150,7 +100,8 @@ def is_quant_downloaded(repo: str, quant: str) -> bool:
         return False
         
     # 2. Fuzzy scan across models_dir
-    for root, dirs, files in os.walk(models_dir):
+    walk_data = walk_cache if walk_cache is not None else os.walk(models_dir)
+    for root, dirs, files in walk_data:
         if quant.endswith(".gguf"):
             # Only match files in directories related to this repo
             if not _dir_matches_repo(root):
@@ -189,6 +140,7 @@ def get_hf_quants(repo: str) -> list[str]:
     try:
         files = api.list_repo_files(repo_id=repo, repo_type="model")
     except Exception:
+        logger.exception(f"Failed to list HF files for repo: {repo}")
         return []
 
     quants = set()

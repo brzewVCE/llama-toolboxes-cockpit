@@ -2,21 +2,18 @@ import os
 import json
 import re
 from pathlib import Path
-
-CONFIG_FILE = Path(os.path.expanduser("~/.llama-cockpit.conf"))
+from src.config import read_user_config, write_user_config, logger
 
 def get_configs_dir() -> Path:
     """Gets the path to the custom configs directory, defaulting to ~/.llama-cockpit/configs."""
-    if CONFIG_FILE.exists():
+    conf = read_user_config()
+    if "configs_dir" in conf:
         try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-                if "configs_dir" in conf:
-                    path = Path(os.path.expanduser(conf["configs_dir"]))
-                    path.mkdir(parents=True, exist_ok=True)
-                    return path
+            path = Path(os.path.expanduser(conf["configs_dir"]))
+            path.mkdir(parents=True, exist_ok=True)
+            return path
         except Exception:
-            pass
+            logger.exception("Failed to get configs directory path")
             
     default_path = Path(os.path.expanduser("~/.llama-cockpit/configs"))
     default_path.mkdir(parents=True, exist_ok=True)
@@ -24,24 +21,16 @@ def get_configs_dir() -> Path:
 
 def save_configs_dir(path_str: str) -> bool:
     """Saves the path to the custom configs directory in ~/.llama-cockpit.conf."""
-    conf = {}
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                conf = json.load(f)
-        except Exception:
-            pass
-            
+    conf = read_user_config()
     conf["configs_dir"] = path_str
-    try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(conf, f, indent=4)
-        new_dir = Path(os.path.expanduser(path_str))
-        new_dir.mkdir(parents=True, exist_ok=True)
-        return True
-    except Exception as e:
-        print(f"Error saving config: {e}")
-        return False
+    if write_user_config(conf):
+        try:
+            new_dir = Path(os.path.expanduser(path_str))
+            new_dir.mkdir(parents=True, exist_ok=True)
+            return True
+        except Exception:
+            logger.exception("Failed to create user config directory")
+    return False
 
 def load_built_in_configs() -> list[dict]:
     """Loads default configurations bundled in assets/configs.json."""
@@ -56,7 +45,7 @@ def load_built_in_configs() -> list[dict]:
                     cfg["filename"] = ""
                 return configs
         except Exception:
-            pass
+            logger.exception("Failed to load built-in configs")
     return []
 
 def scan_local_configs() -> list[dict]:
@@ -79,7 +68,7 @@ def scan_local_configs() -> list[dict]:
                             cfg["models"] = []
                         configs.append(cfg)
             except Exception:
-                pass
+                logger.exception(f"Failed to scan custom config file: {f_name}")
     return sorted(configs, key=lambda x: x["name"].lower())
 
 def get_all_configs() -> list[dict]:
@@ -116,8 +105,8 @@ def save_custom_config(name: str, commands: str, models: list[str]) -> bool:
         with open(f_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
         return True
-    except Exception as e:
-        print(f"Error saving config file: {e}")
+    except Exception:
+        logger.exception(f"Error saving custom config file: {filename}")
         return False
 
 def delete_custom_config_file(filename: str) -> bool:
@@ -131,5 +120,5 @@ def delete_custom_config_file(filename: str) -> bool:
             os.remove(f_path)
             return True
         except Exception:
-            pass
+            logger.exception(f"Error deleting custom config file: {filename}")
     return False

@@ -12,10 +12,11 @@ from src.model_manager import (
     get_default_toolbox, save_default_toolbox, get_active_platform,
     save_active_platform,
 )
-from src.config import get_platforms, get_platform
+from src.config import get_platforms, get_platform, logger
 from src.widgets import ConfirmModal, SelectModal, SearchableSelect
 
 import os
+import subprocess
 
 
 class ToolboxHandlersMixin:
@@ -76,7 +77,7 @@ class ToolboxHandlersMixin:
                         try:
                             self.active_toolbox_name = dt.get_cell_at((dt.cursor_row, 1))
                         except Exception:
-                            pass
+                            logger.exception("Failed to get active toolbox name cell in finish_mounting")
                         first = False
                     else:
                         dt.add_class("inactive-table")
@@ -245,7 +246,10 @@ class ToolboxHandlersMixin:
             return
         cmd = get_os_toolbox_cmd()
         with self.suspend():
-            os.system(f"{cmd} enter {tb['name']}")
+            try:
+                subprocess.run([cmd, "enter", tb['name']])
+            except Exception:
+                logger.exception(f"Failed to enter toolbox: {tb['name']} using command {cmd}")
 
     # ── Toggle Select All ────────────────────────────────────────────
 

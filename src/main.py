@@ -5,12 +5,13 @@ from textual.widgets import Button, Label, Input, Checkbox, DataTable
 from textual.containers import Horizontal
 import os
 import subprocess
+import time
 
 from src.toolbox_manager import detect_engines
 from src.model_manager import get_active_platform
 from src.server_runner import build_server_cmd
 from src.config import (
-    load_models, get_platform, get_model_config, get_inference_profiles
+    load_models, get_platform, get_model_config, get_inference_profiles, logger
 )
 from src.widgets import SearchableSelect
 from src.ui_layout import compose_app
@@ -100,7 +101,7 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
                         msg = f"Update available: v{latest_version} (Current: v{current_version}).\nRun `pipx upgrade llama-cockpit` to update."
                         self.app.call_from_thread(self.notify, msg, title="Cockpit Update Available", severity="information", timeout=15)
         except Exception:
-            pass
+            logger.exception("Failed to check for app updates")
 
     def _update_platform_label(self):
         platform = get_platform(self.active_platform_id)
@@ -121,7 +122,7 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
                 lbl_gpu.update("HIP Devices")
                 inp_gpu.placeholder = "e.g. 0 (leave empty to unset)"
         except Exception:
-            pass
+            logger.exception("Failed to update platform label")
 
     # ── DataTable Selection Logic ────────────────────────────────────
 
@@ -135,12 +136,11 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
                 self.selected_toolboxes.add(name)
                 dt.update_cell_at((cursor_row, 0), "\\[x]")
         except Exception:
-            pass
+            logger.exception("Failed to toggle row selection")
 
     @on(events.MouseUp)
     def on_mouse_up(self, event: events.MouseUp):
         if isinstance(event.control, DataTable) and event.control.id and event.control.id.startswith("dt_"):
-            import time
             self._last_dt_click_time = time.time()
 
     @on(DataTable.RowSelected)
@@ -154,7 +154,6 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
             return
             
         if event.control.id and event.control.id.startswith("dt_"):
-            import time
             if time.time() - getattr(self, "_last_dt_click_time", 0.0) < 0.1:
                 self._toggle_row_selection(event.control, event.cursor_row)
                 
@@ -169,7 +168,7 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
                         else:
                             dt.add_class("inactive-table")
             except Exception:
-                pass
+                logger.exception("Failed to highlight row in DataTable")
 
     def on_descendant_focus(self, event: events.DescendantFocus):
         widget = event.widget
@@ -181,7 +180,7 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
                         try:
                             self.active_toolbox_name = dt.get_cell_at((dt.cursor_row, 1))
                         except Exception:
-                            pass
+                            logger.exception("Failed to get cell value on focus")
                     else:
                         dt.add_class("inactive-table")
 
@@ -201,6 +200,20 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
         if getattr(self, 'selected_toolboxes', set()) and len(self.selected_toolboxes) == 1:
             return tb_dict.get(list(self.selected_toolboxes)[0])
         return None
+
+    # ── Config & Model Event Handlers (Scanned by Metaclass) ──────────
+
+    @on(SearchableSelect.Changed, "#sel_creator_config")
+    def on_creator_config_selected(self, event: SearchableSelect.Changed):
+        super().on_creator_config_selected(event)
+
+    @on(DataTable.RowSelected, "#local_config_list")
+    def on_config_row_selected(self, event: DataTable.RowSelected):
+        super().on_config_row_selected(event)
+
+    @on(Input.Submitted, "#sel_download_model Input")
+    def on_download_input_submitted(self, event: Input.Submitted):
+        super().on_download_input_submitted(event)
 
     # ── Server Mode Event Handlers ───────────────────────────────────
 
@@ -346,6 +359,7 @@ class LlamaCockpitApp(ToolboxHandlersMixin, ModelHandlersMixin, ConfigHandlersMi
         try:
             tokens = shlex.split(arg_str)
         except Exception:
+            logger.exception("Failed to shlex.split argument string")
             return arg_str
             
         new_tokens = []

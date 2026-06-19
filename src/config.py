@@ -1,11 +1,47 @@
 import json
 import os
+import logging
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent
 ASSETS_DIR = ROOT_DIR / "assets"
 MODELS_JSON = ASSETS_DIR / "models.json"
 TOOLBOXES_JSON = ASSETS_DIR / "toolboxes.json"
+
+CONFIG_FILE = Path(os.path.expanduser("~/.llama-cockpit.conf"))
+
+# Configure logging
+_log_dir = Path(os.path.expanduser("~/.llama-cockpit"))
+_log_dir.mkdir(parents=True, exist_ok=True)
+_log_file = _log_dir / "cockpit_debug.log"
+
+logger = logging.getLogger("llama_cockpit")
+if not logger.handlers:
+    logger.setLevel(logging.DEBUG)
+    fh = logging.FileHandler(str(_log_file), encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+def read_user_config() -> dict:
+    if not CONFIG_FILE.exists():
+        return {}
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        logger.exception("Failed to load user config file")
+        return {}
+
+def write_user_config(conf: dict) -> bool:
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(conf, f, indent=4)
+        return True
+    except Exception:
+        logger.exception("Failed to write user config file")
+        return False
 
 def load_models() -> list[dict]:
     if MODELS_JSON.exists():

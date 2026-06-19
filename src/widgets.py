@@ -127,13 +127,10 @@ class _DropdownOverlay(Widget):
     def _on_mouse_click_option(self, event: OptionList.OptionSelected) -> None:
         """Handle mouse clicks on options (fires even when can_focus=False)."""
         event.stop()
-        label = str(event.option.prompt)
-        val = label
-        for l, v in self._options:
-            if l == label:
-                val = v
-                break
-        self._on_select(val, label)
+        idx = event.option_index
+        if idx is not None and 0 <= idx < len(self._options):
+            label, val = self._options[idx]
+            self._on_select(val, label)
 
 
 # ── SearchableSelect ─────────────────────────────────────────────────────────
